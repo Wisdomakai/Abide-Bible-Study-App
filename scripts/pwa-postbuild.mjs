@@ -36,9 +36,13 @@ const manifest = {
 };
 await fs.writeFile(path.join(DIST, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2));
 
-const sw = `const CACHE = 'ardent-v1';
+const sw = `const CACHE = 'ardent-v2';
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (e) => e.waitUntil((async () => {
+  const keys = await caches.keys();
+  await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+  await self.clients.claim();
+})()));
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith((async () => {
