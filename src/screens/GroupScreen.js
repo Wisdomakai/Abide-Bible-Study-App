@@ -5,12 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../data/AppContext';
 import { getFeed, addPost, toggleAmen, deletePost, subscribe } from '../data/api';
 import { Pill, EmptyState, timeAgo, LinkText } from '../components/ui';
+import VoiceRecorder from '../components/VoiceRecorder';
+import VoicePlayer from '../components/VoicePlayer';
+import { uploadVoice } from '../data/voice';
 import { colors, fonts, spacing, radius, shadow } from '../theme';
 
 const TYPE_META = {
   reflection: { label: 'Reflection', tone: 'gold', icon: 'sunny-outline' },
   prayer: { label: 'Prayer', tone: 'primary', icon: 'hand-left-outline' },
   note: { label: 'Note', tone: 'muted', icon: 'create-outline' },
+  voice: { label: 'Voice', tone: 'primary', icon: 'mic-outline' },
 };
 const initials = (name) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
@@ -19,6 +23,7 @@ export default function GroupScreen({ navigation }) {
   const [feed, setFeed] = useState([]);
   const [composing, setComposing] = useState(false);
   const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
 
   const refresh = useCallback(async () => {
     if (selectedGroupId) setFeed(await getFeed(selectedGroupId));
@@ -41,6 +46,18 @@ export default function GroupScreen({ navigation }) {
     await addPost(selectedGroupId, { author: profile.name, type: 'note', text: draft.trim() });
     setDraft(''); setComposing(false); refresh();
   };
+  const handleVoice = async (uri, dur) => {
+    if (!selectedGroupId) return;
+    setSending(true);
+    try {
+      const url = await uploadVoice(uri);
+      await addPost(selectedGroupId, { author: profile.name, type: 'voice', text: '', audioUrl: url, audioDuration: dur });
+      setComposing(false); refresh();
+    } catch (e) {
+      Alert.alert('Couldn’t send voice', String(e?.message || e));
+    } finally { setSending(false); }
+  };
+
   const onAmen = async (postId) => { await toggleAmen(postId, profile.name); };
   const onDelete = (postId) => {
     Alert.alert('Delete message?', 'This removes it from the group for everyone.', [
@@ -120,7 +137,12 @@ export default function GroupScreen({ navigation }) {
                 <Pill label={meta.label} tone={meta.tone} icon={meta.icon} />
               </View>
               {item.ref ? <Text style={styles.ref}>{item.ref}</Text> : null}
-              <LinkText style={styles.body}>{item.text}</LinkText>
+              {item.text ? <LinkText style={styles.body}>{item.text}</LinkText> : null}
+              {item.audioUrl ? (
+                <View style={{ marginTop: item.text ? spacing.md : 0 }}>
+                  <VoicePlayer url={item.audioUrl} duration={item.audioDuration} />
+                </View>
+              ) : null}
               <View style={styles.postFoot}>
                 <Pressable onPress={() => onAmen(item.id)} style={({ pressed }) => [styles.amen, amened && styles.amenOn, pressed && { opacity: 0.8 }]}>
                   <Ionicons name={amened ? 'heart' : 'heart-outline'} size={16} color={amened ? colors.white : colors.primary} />
@@ -151,6 +173,10 @@ export default function GroupScreen({ navigation }) {
             <Pressable onPress={post} disabled={!draft.trim()} style={({ pressed }) => [styles.postBtn, !draft.trim() && { opacity: 0.4 }, pressed && { opacity: 0.85 }]}>
               <Ionicons name="send" size={18} color={colors.white} /><Text style={styles.postBtnText}>Post</Text>
             </Pressable>
+            <View style={styles.voiceRow}>
+              <Text style={styles.voiceLabel}>{sending ? 'Sending voice…' : 'or send a voice message (up to 15 min)'}</Text>
+              <VoiceRecorder onRecorded={handleVoice} busy={sending} />
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -196,4 +222,7 @@ const styles = StyleSheet.create({
   sheetInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, minHeight: 120, fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.text, textAlignVertical: 'top' },
   postBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, height: 52, borderRadius: radius.pill, marginTop: spacing.lg },
   postBtnText: { fontFamily: fonts.bodySemi, fontSize: 16, color: colors.white },
+  voiceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
+  voiceLabel: { flex: 1, fontFamily: fonts.body, fontSize: 13, color: colors.muted },
 });
+

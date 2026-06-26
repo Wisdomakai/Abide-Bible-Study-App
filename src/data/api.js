@@ -46,9 +46,9 @@ const localApi = {
     return [{ id: 'local', name: p?.groupName || 'My Group', code: p?.groupCode || 'local', adminName: p?.name || 'You', members: 1, lastPost: null }];
   },
   async getFeed() { return [...(await localRead())].sort((a, b) => b.createdAt - a.createdAt); },
-  async addPost(_g, { author, type, text, ref }) {
+  async addPost(_g, { author, type, text, ref, audioUrl, audioDuration }) {
     const f = await localRead();
-    const post = { id: uid(), author, type, text, ref: ref || null, amens: [], createdAt: Date.now() };
+    const post = { id: uid(), author, type, text, ref: ref || null, amens: [], createdAt: Date.now(), audioUrl: audioUrl || null, audioDuration: audioDuration || 0 };
     const next = [post, ...f]; await saveJSON(FEED_KEY, next); localListeners.forEach((fn) => fn(next));
     return post;
   },
@@ -88,7 +88,7 @@ async function currentUserId() {
   return data?.user?.id;
 }
 function mapRow(r) {
-  return { id: r.id, author: r.author, type: r.type, text: r.text, ref: r.ref, amens: r.amens || [], createdAt: new Date(r.created_at).getTime() };
+  return { id: r.id, author: r.author, type: r.type, text: r.text, ref: r.ref, amens: r.amens || [], createdAt: new Date(r.created_at).getTime(), audioUrl: r.audio_url || null, audioDuration: r.audio_duration || 0 };
 }
 
 const supaApi = {
@@ -142,13 +142,13 @@ const supaApi = {
     return (data || []).map(mapRow);
   },
 
-  async addPost(groupId, { author, type, text, ref }) {
+  async addPost(groupId, { author, type, text, ref, audioUrl, audioDuration }) {
     const userId = await currentUserId();
-    const { data, error } = await supabase.from('posts')
-      .insert({ group_id: groupId, author_id: userId, author_name: author, type, text, ref: ref || null })
-      .select().single();
+    const row = { group_id: groupId, author_id: userId, author_name: author, type, text, ref: ref || null };
+    if (audioUrl) { row.audio_url = audioUrl; row.audio_duration = audioDuration || null; } // only when present (needs voice.sql)
+    const { data, error } = await supabase.from('posts').insert(row).select().single();
     if (error) throw error;
-    return { id: data.id, author, type, text, ref: ref || null, amens: [], createdAt: new Date(data.created_at).getTime() };
+    return { id: data.id, author, type, text, ref: ref || null, amens: [], createdAt: new Date(data.created_at).getTime(), audioUrl: audioUrl || null, audioDuration: audioDuration || 0 };
   },
 
   async toggleAmen(postId, voterName) {

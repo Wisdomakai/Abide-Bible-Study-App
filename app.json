@@ -42,7 +42,13 @@
           "color": "#4B3F9E"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Ardent to use your microphone to record voice notes."
+        }
+      ]
     ],
     "extra": {
       "eas": {

@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../data/AppContext';
 import { addPost } from '../data/api';
 import GroupChooser from '../components/GroupChooser';
+import VoiceRecorder from '../components/VoiceRecorder';
+import VoicePlayer from '../components/VoicePlayer';
+import { uploadVoice } from '../data/voice';
 import { colors, fonts, spacing, radius } from '../theme';
 
 export default function NoteEditorScreen({ route, navigation }) {
@@ -16,8 +19,23 @@ export default function NoteEditorScreen({ route, navigation }) {
   const [title, setTitle] = useState(existing?.title || '');
   const [body, setBody] = useState(existing?.body || '');
   const [tag, setTag] = useState(existing?.tag || '');
+  const [audio, setAudio] = useState(existing?.audioUrl ? { url: existing.audioUrl, duration: existing.audioDuration } : null);
+  const [recBusy, setRecBusy] = useState(false);
 
-  const persist = () => upsertNote({ id: noteId, title: title.trim(), body: body.trim(), tag: tag.trim() });
+  const persist = () => upsertNote({ id: noteId, title: title.trim(), body: body.trim(), tag: tag.trim(), audioUrl: audio?.url || null, audioDuration: audio?.duration || 0 });
+
+  const onRecorded = async (uri, dur) => {
+    setRecBusy(true);
+    try {
+      const url = await uploadVoice(uri);
+      const a = { url, duration: dur };
+      setAudio(a);
+      const savedId = upsertNote({ id: noteId, title: title.trim(), body: body.trim(), tag: tag.trim(), audioUrl: url, audioDuration: dur });
+      setNoteId(savedId);
+    } catch (e) {
+      Alert.alert('Couldn’t save recording', String(e?.message || e));
+    } finally { setRecBusy(false); }
+  };
 
   const save = () => {
     if (!title.trim() && !body.trim()) { navigation.goBack(); return; }
@@ -36,7 +54,7 @@ export default function NoteEditorScreen({ route, navigation }) {
   });
 
   const onShare = () => {
-    if (!body.trim() && !title.trim()) return;
+    if (!body.trim() && !title.trim() && !audio) return;
     if (groups.length === 0) { Alert.alert('No group yet', 'Create or join a group first (Group tab).'); return; }
     const text = (title ? title + '\n\n' : '') + body;
     if (groups.length === 1) shareTo(groups[0], text);
@@ -47,7 +65,10 @@ export default function NoteEditorScreen({ route, navigation }) {
     setPendingShare(null);
     const savedId = persist();
     setNoteId(savedId);
-    const post = await addPost(group.id, { author: profile.name, type: 'note', text });
+    const post = await addPost(group.id, {
+      author: profile.name, type: 'note', text,
+      audioUrl: audio?.url, audioDuration: audio?.duration,
+    });
     upsertNote({ id: savedId, sharedPostId: post.id });
     Alert.alert('Shared', `Your note was posted to ${group.name}.`);
   };
@@ -90,6 +111,22 @@ export default function NoteEditorScreen({ route, navigation }) {
         autoFocus={!existing}
       />
 
+      <View style={styles.voiceSection}>
+        {audio ? (
+          <View style={styles.voiceHas}>
+            <View style={{ flex: 1 }}><VoicePlayer url={audio.url} duration={audio.duration} /></View>
+            <Pressable onPress={() => { setAudio(null); upsertNote({ id: noteId, audioUrl: null, audioDuration: 0 }); }} hitSlop={8} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.voiceAdd}>
+            <Text style={styles.voiceLabel}>{recBusy ? 'Saving recording…' : 'Add a voice note (up to 15 min)'}</Text>
+            <VoiceRecorder onRecorded={onRecorded} busy={recBusy} />
+          </View>
+        )}
+      </View>
+
       <View style={styles.footerRow}>
         <Pressable onPress={onShare} style={({ pressed }) => [styles.footBtn, pressed && { opacity: 0.7 }]}>
           <Ionicons name="people-outline" size={18} color={colors.primary} />
@@ -124,6 +161,10 @@ const styles = StyleSheet.create({
   },
   tag: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
   body: { fontFamily: fonts.body, fontSize: 17, lineHeight: 27, color: colors.text, minHeight: 240 },
+  voiceSection: { marginTop: spacing.xl, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
+  voiceAdd: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  voiceHas: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  voiceLabel: { flex: 1, fontFamily: fonts.body, fontSize: 14, color: colors.muted },
   footerRow: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.xl },
   footBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   footBtnText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
