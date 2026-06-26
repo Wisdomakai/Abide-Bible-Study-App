@@ -69,4 +69,8 @@ if (!html.includes('manifest.webmanifest')) {
 html = html.replace(/<title>.*?<\/title>/, '<title>Ardent — Bible Study Journal</title>');
 await fs.writeFile(indexPath, html);
 
-console.log('PWA assets written to dist/ (manifest, icons, sw.js, meta tags).');
+// Bundle the admin dashboard at /admin (gated by the admin password).
+await fs.mkdir(path.join(DIST, 'admin'), { recursive: true });
+await fs.copyFile('admin/index.html', path.join(DIST, 'admin', 'index.html'));
+
+console.log('PWA assets written to dist/ (manifest, icons, sw.js, meta tags, /admin).');

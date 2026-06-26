@@ -8,112 +8,109 @@
     :root { --indigo:#4B3F9E; --gold:#C98A3C; --bg:#FBF8F2; --card:#fff; --text:#2B2540; --muted:#6F6A82; --border:#ECE5D8; --green:#4F9D69; }
     * { box-sizing:border-box; }
     body { margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
-    header { background:var(--indigo); color:#fff; padding:22px 24px; display:flex; align-items:center; gap:14px; }
+    header { background:var(--indigo); color:#fff; padding:20px 24px; display:flex; align-items:center; gap:14px; }
     .logo { width:40px; height:40px; border-radius:12px; background:var(--gold); display:flex; align-items:center; justify-content:center; font-weight:800; font-family:Georgia,serif; }
-    h1 { font-size:20px; margin:0; font-weight:700; } header .sub { font-size:13px; color:#C9C2F0; }
-    .wrap { max-width:920px; margin:0 auto; padding:24px; }
-    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
-    .stat { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; }
-    .stat .n { font-size:30px; font-weight:800; color:var(--indigo); }
-    .stat .l { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
-    .bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    h1 { font-size:20px; margin:0; } header .sub { font-size:13px; color:#C9C2F0; }
+    .wrap { max-width:980px; margin:0 auto; padding:24px; }
+    .gate { max-width:380px; margin:60px auto; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; }
+    .gate h2 { margin:0 0 6px; font-size:18px; } .gate p { color:var(--muted); font-size:14px; margin:0 0 18px; }
+    input { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font:inherit; margin-bottom:12px; }
+    button { font:inherit; background:var(--indigo); color:#fff; border:none; padding:11px 18px; border-radius:999px; cursor:pointer; font-weight:600; }
+    button:hover { opacity:.9; } button.ghost { background:transparent; color:var(--indigo); }
+    label.row { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin-bottom:16px; }
+    label.row input { width:auto; margin:0; }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:26px; }
+    .stat { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px 16px; }
+    .stat .n { font-size:26px; font-weight:800; color:var(--indigo); } .stat .l { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+    .bar { display:flex; align-items:center; justify-content:space-between; margin:26px 0 12px; }
     .bar h2 { font-size:16px; margin:0; }
-    button { font:inherit; background:var(--indigo); color:#fff; border:none; padding:9px 16px; border-radius:999px; cursor:pointer; font-weight:600; }
-    button:hover { opacity:.9; }
     table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
-    th,td { text-align:left; padding:13px 16px; font-size:14px; border-bottom:1px solid var(--border); }
-    th { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); background:#F3EFE6; }
+    th,td { text-align:left; padding:11px 14px; font-size:13.5px; border-bottom:1px solid var(--border); white-space:nowrap; }
+    th { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); background:#F3EFE6; }
     tr:last-child td { border-bottom:none; }
-    .avatar { width:30px; height:30px; border-radius:50%; background:var(--indigo); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; margin-right:10px; vertical-align:middle; }
-    .badge { font-size:12px; padding:3px 9px; border-radius:999px; }
-    .on { background:#E5F1E9; color:var(--green); } .off { background:#F1EFE8; color:var(--muted); }
-    .msg { padding:16px; border-radius:12px; margin-bottom:16px; font-size:14px; }
+    .avatar { width:26px; height:26px; border-radius:50%; background:var(--indigo); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:11px; margin-right:8px; vertical-align:middle; }
+    .badge { font-size:11px; padding:3px 8px; border-radius:999px; } .on { background:#E5F1E9; color:var(--green); } .off { background:#F1EFE8; color:var(--muted); }
+    .chip { font-size:12px; background:#ECE9F8; color:var(--indigo); padding:2px 8px; border-radius:999px; }
+    .msg { padding:14px; border-radius:12px; margin-bottom:16px; font-size:14px; }
     .err { background:#FBEAEA; color:#A32D2D; border:1px solid #F1C9C9; }
     .muted { color:var(--muted); font-size:13px; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
   <header>
     <div class="logo">A</div>
-    <div><h1>Ardent — Admin</h1><div class="sub">Members &amp; activity</div></div>
+    <div><h1>Ardent — Admin</h1><div class="sub">Members, groups &amp; activity</div></div>
   </header>
+
   <div class="wrap">
-    <div id="error"></div>
-    <div class="stats">
-      <div class="stat"><div class="n" id="s-total">—</div><div class="l">Total users</div></div>
-      <div class="stat"><div class="n" id="s-24h">—</div><div class="l">Active 24h</div></div>
-      <div class="stat"><div class="n" id="s-7d">—</div><div class="l">Active 7 days</div></div>
-      <div class="stat"><div class="n" id="s-push">—</div><div class="l">Notifications on</div></div>
+    <div id="gate" class="gate">
+      <h2>Admin access</h2>
+      <p>Enter the admin password to view members and activity.</p>
+      <div id="gateErr"></div>
+      <input id="pw" type="password" placeholder="Admin password" autocomplete="current-password" />
+      <label class="row"><input type="checkbox" id="remember" /> Remember on this device</label>
+      <button id="enter">View dashboard</button>
     </div>
-    <div class="bar">
-      <h2>Users <span class="muted" id="updated"></span></h2>
-      <button id="refresh">Refresh</button>
+
+    <div id="dash" class="hidden">
+      <div id="error"></div>
+      <div class="stats" id="stats"></div>
+
+      <div class="bar"><h2>Members</h2><div><span class="muted" id="updated"></span> <button class="ghost" id="refresh">Refresh</button> <button class="ghost" id="logout">Sign out</button></div></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Group</th><th>Joined</th><th>Last active</th><th>Posts</th><th>Last post</th><th>Notif.</th></tr></thead><tbody id="users"></tbody></table></div>
+
+      <div class="bar"><h2>Groups</h2></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Group</th><th>Invite code</th><th>Members</th><th>Posts</th></tr></thead><tbody id="groups"></tbody></table></div>
+
+      <div class="bar"><h2>Recent logins</h2></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Group code</th><th>When</th></tr></thead><tbody id="logins"></tbody></table></div>
+
+      <p class="muted" style="margin-top:18px">Data is read securely via a server function using your admin password.</p>
     </div>
-    <table>
-      <thead><tr><th>Name</th><th>Joined</th><th>Last active</th><th>Notifications</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
-    </table>
-    <p class="muted" style="margin-top:18px">Keep this page private — open it on your own device. It reads member names and activity only.</p>
   </div>
 
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-    const SUPABASE_URL = 'https://udnczmdjjiltpehtvtas.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_sp9QVgDEqcd0YBpyL8h9xQ__84AG-1I';
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
+  <script>
+    const FN_URL = 'https://udnczmdjjiltpehtvtas.functions.supabase.co/admin-data';
     const $ = (id) => document.getElementById(id);
     const initials = (n) => (n || '?').trim().slice(0, 2).toUpperCase();
-    function ago(ts) {
-      if (!ts) return '—';
-      const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-      if (s < 60) return 'just now';
-      const m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
-      const h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
-      const d = Math.floor(h / 24); if (d < 7) return d + 'd ago';
-      return new Date(ts).toLocaleDateString();
-    }
-    const fmtDate = (ts) => ts ? new Date(ts).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }) : '—';
+    function ago(ts){ if(!ts) return '—'; const s=Math.floor((Date.now()-new Date(ts).getTime())/1000); if(s<60)return 'just now'; const m=Math.floor(s/60); if(m<60)return m+'m ago'; const h=Math.floor(m/60); if(h<24)return h+'h ago'; const d=Math.floor(h/24); if(d<7)return d+'d ago'; return new Date(ts).toLocaleDateString(); }
+    const fmt = (ts) => ts ? new Date(ts).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}) : '—';
 
-    async function ensureSession() {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        const { error } = await supabase.auth.signInAnonymously();
-        if (error) throw new Error('Could not authenticate. In Supabase, enable Authentication → Anonymous sign-ins. (' + error.message + ')');
-      }
-    }
-
-    async function load() {
-      $('error').innerHTML = '';
-      $('rows').innerHTML = '<tr><td colspan="4" class="muted">Loading…</td></tr>';
+    async function load(pw){
+      $('error').innerHTML=''; $('gateErr').innerHTML='';
       try {
-        await ensureSession();
-        const { data, error } = await supabase.from('profiles').select('*');
-        if (error) throw error;
-        const users = (data || []).sort((a, b) => new Date(b.last_seen || b.created_at || 0) - new Date(a.last_seen || a.created_at || 0));
-        const now = Date.now(), DAY = 86400000;
-        const seen = (u) => new Date(u.last_seen || u.created_at || 0).getTime();
-        $('s-total').textContent = users.length;
-        $('s-24h').textContent = users.filter(u => now - seen(u) < DAY).length;
-        $('s-7d').textContent = users.filter(u => now - seen(u) < 7 * DAY).length;
-        $('s-push').textContent = users.filter(u => !!u.push_token).length;
-        $('updated').textContent = '· updated ' + new Date().toLocaleTimeString();
-        $('rows').innerHTML = users.length ? users.map(u => `
-          <tr>
-            <td><span class="avatar">${initials(u.name)}</span>${u.name || '(no name)'}</td>
-            <td>${fmtDate(u.created_at)}</td>
-            <td>${ago(u.last_seen || u.created_at)}</td>
-            <td><span class="badge ${u.push_token ? 'on' : 'off'}">${u.push_token ? 'On' : 'Off'}</span></td>
-          </tr>`).join('') : '<tr><td colspan="4" class="muted">No users yet.</td></tr>';
-      } catch (e) {
-        $('rows').innerHTML = '';
-        $('error').innerHTML = '<div class="msg err">' + (e.message || e) + '</div>';
+        const res = await fetch(FN_URL, { method:'POST', headers:{ 'x-admin-key': pw, 'Content-Type':'application/json' }, body:'{}' });
+        if (res.status === 401) throw new Error('Wrong password.');
+        if (!res.ok) throw new Error('Request failed ('+res.status+').');
+        const d = await res.json();
+        $('gate').classList.add('hidden'); $('dash').classList.remove('hidden');
+        const s = d.stats;
+        $('stats').innerHTML = [
+          ['Total users', s.users],['Active 24h', s.active24],['Active 7d', s.active7],
+          ['Notifications', s.pushOn],['Groups', s.groups],['Posts', s.posts],['Logins today', s.loginsToday],
+        ].map(([l,n])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+        $('users').innerHTML = d.users.length ? d.users.map(u=>`<tr>
+          <td><span class="avatar">${initials(u.name)}</span>${u.name||'(no name)'}</td>
+          <td><span class="chip">${u.group}</span></td><td>${fmt(u.joined)}</td><td>${ago(u.lastSeen)}</td>
+          <td>${u.posts}</td><td>${ago(u.lastPost)}</td>
+          <td><span class="badge ${u.push?'on':'off'}">${u.push?'On':'Off'}</span></td></tr>`).join('') : '<tr><td colspan="7" class="muted">No users yet.</td></tr>';
+        $('groups').innerHTML = d.groups.length ? d.groups.map(g=>`<tr><td>${g.name}</td><td><span class="chip">${g.code}</span></td><td>${g.members}</td><td>${g.posts}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">No groups yet.</td></tr>';
+        $('logins').innerHTML = d.logins.length ? d.logins.map(l=>`<tr><td>${l.name||'—'}</td><td><span class="chip">${l.group_code||'—'}</span></td><td>${ago(l.created_at)}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">No logins recorded yet.</td></tr>';
+        $('updated').textContent = 'updated '+new Date().toLocaleTimeString();
+      } catch(e){
+        const box = $('dash').classList.contains('hidden') ? 'gateErr' : 'error';
+        $(box).innerHTML = '<div class="msg err">'+(e.message||e)+'</div>';
       }
     }
 
-    $('refresh').addEventListener('click', load);
-    load();
+    function enter(){ const pw=$('pw').value.trim(); if(!pw) return; if($('remember').checked) localStorage.setItem('ardent_admin_pw', pw); load(pw); }
+    $('enter').addEventListener('click', enter);
+    $('pw').addEventListener('keydown', e=>{ if(e.key==='Enter') enter(); });
+    $('refresh').addEventListener('click', ()=>load(localStorage.getItem('ardent_admin_pw')||$('pw').value.trim()));
+    $('logout').addEventListener('click', ()=>{ localStorage.removeItem('ardent_admin_pw'); location.reload(); });
+    const saved = localStorage.getItem('ardent_admin_pw');
+    if (saved) load(saved);
   </script>
 </body>
 </html>
