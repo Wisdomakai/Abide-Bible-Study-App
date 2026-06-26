@@ -92,8 +92,10 @@ let groupIdPromise = null;
 async function ensureReady() {
   if (!groupIdPromise) {
     groupIdPromise = (async () => {
-      const { data: sess } = await supabase.auth.getSession();
-      if (!sess?.session) {
+      // Validate against the server (getUser), not just the cached session, so a
+      // device whose account was deleted re-signs-in cleanly instead of erroring.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         const { error } = await supabase.auth.signInAnonymously();
         if (error) throw error;
       }
