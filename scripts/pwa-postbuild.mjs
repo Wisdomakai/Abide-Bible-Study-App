@@ -48,6 +48,27 @@ self.addEventListener('fetch', (e) => {
     return cached || network;
   })());
 });
+
+// Web Push: show the notification, and focus/open the app on tap.
+self.addEventListener('push', (e) => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (_) {}
+  const title = data.title || 'Ardent';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: data.body || '',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    data: { url: data.url || '/' },
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const all = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) { if ('focus' in c) return c.focus(); }
+    if (clients.openWindow) return clients.openWindow('/');
+  })());
+});
 `;
 await fs.writeFile(path.join(DIST, 'sw.js'), sw);
 

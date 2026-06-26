@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../data/AppContext';
 import { loadReminder, setReminder } from '../data/notifications';
+import { webPushSupported, webPushStatus, subscribeWebPush } from '../data/webPush';
 import { backendMode } from '../data/api';
 import { GROUP_CODE } from '../data/config';
 import { Card, SectionTitle } from '../components/ui';
@@ -24,7 +25,17 @@ export default function SettingsScreen({ navigation }) {
   const { profile } = useApp();
   const [reminder, setReminderState] = useState({ enabled: false, hour: 7, minute: 0 });
   const [showPicker, setShowPicker] = useState(false);
+  const [webState, setWebState] = useState(() => (webPushSupported() ? webPushStatus() : 'unsupported'));
+  const [webMsg, setWebMsg] = useState('');
   const groupCode = profile?.groupCode || GROUP_CODE;
+
+  const enableWeb = async () => {
+    setWebMsg('Requesting permission…');
+    const r = await subscribeWebPush();
+    if (r.ok) { setWebState('granted'); setWebMsg('Notifications enabled on this device ✓'); }
+    else if (r.reason === 'denied') setWebMsg('Permission was blocked. Allow notifications in your browser settings, then try again.');
+    else setWebMsg('Couldn’t enable: ' + r.reason);
+  };
 
   useEffect(() => { loadReminder().then(setReminderState); }, []);
 
@@ -96,6 +107,21 @@ export default function SettingsScreen({ navigation }) {
           </>
         )}
       </Card>
+
+      {webPushSupported() && (
+        <>
+          <SectionTitle style={{ marginTop: spacing.xl }}>Group notifications</SectionTitle>
+          <Card>
+            <Text style={styles.label}>Get notified of new group posts</Text>
+            <Text style={styles.sub}>Works in this browser or the installed web app.</Text>
+            <Pressable onPress={enableWeb} style={({ pressed }) => [styles.shareBtn, { marginTop: spacing.lg, alignSelf: 'flex-start' }, pressed && { opacity: 0.85 }]}>
+              <Ionicons name="notifications-outline" size={17} color={colors.white} />
+              <Text style={styles.shareText}>{webState === 'granted' ? 'Enabled ✓' : 'Enable notifications'}</Text>
+            </Pressable>
+            {webMsg ? <Text style={[styles.sub, { marginTop: spacing.md }]}>{webMsg}</Text> : null}
+          </Card>
+        </>
+      )}
 
       <SectionTitle style={{ marginTop: spacing.xl }}>Group</SectionTitle>
       <Card>

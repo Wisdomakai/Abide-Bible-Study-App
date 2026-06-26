@@ -36,6 +36,9 @@ export const BIBLE_IDS = {
   NLT: '',                    // paste your licensed NLT Bible ID
 };
 
+// Web Push (PWA) — public VAPID key is safe to ship in the client.
+export const VAPID_PUBLIC = 'BJ06BI_NsnqTgv6qetRyOSBKZhkEwVabZdnLC0wtm-dERarfvHICwi89qmXv38bGEcAIqvGgGHduDgthA1UpJEg';
+
 export function isBackendConfigured() {
   return (
     SUPABASE_URL.startsWith('http') &&
