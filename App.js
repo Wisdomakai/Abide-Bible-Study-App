@@ -28,8 +28,10 @@ import JournalScreen from './src/screens/JournalScreen';
 import NoteEditorScreen from './src/screens/NoteEditorScreen';
 import PrayerScreen from './src/screens/PrayerScreen';
 import GroupScreen from './src/screens/GroupScreen';
+import BibleScreen from './src/screens/BibleScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import JoinGroupScreen from './src/screens/JoinGroupScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import LaunchScreen from './src/screens/LaunchScreen';
 import { registerPushToken } from './src/data/notifications';
 import { touchPresence } from './src/data/api';
@@ -46,7 +48,8 @@ const navTheme = {
 
 const TAB_ICONS = {
   Today: ['sunny', 'sunny-outline'],
-  Journal: ['book', 'book-outline'],
+  Bible: ['book', 'book-outline'],
+  Journal: ['create', 'create-outline'],
   Prayer: ['heart', 'heart-outline'],
   Group: ['people', 'people-outline'],
 };
@@ -73,6 +76,7 @@ function Tabs() {
       })}
     >
       <Tab.Screen name="Today" component={TodayScreen} />
+      <Tab.Screen name="Bible" component={BibleScreen} />
       <Tab.Screen name="Journal" component={JournalScreen} />
       <Tab.Screen name="Prayer" component={PrayerScreen} />
       <Tab.Screen name="Group" component={GroupScreen} />
@@ -111,6 +115,7 @@ function Root() {
       <Stack.Screen name="NoteEditor" component={NoteEditorScreen} options={{ title: 'Note', headerBackTitleVisible: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings', headerBackTitleVisible: false }} />
       <Stack.Screen name="JoinGroup" component={JoinGroupScreen} options={{ title: 'Group', headerBackTitleVisible: false }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', headerBackTitleVisible: false }} />
     </Stack.Navigator>
   );
 }

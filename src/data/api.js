@@ -64,6 +64,7 @@ const localApi = {
   },
   subscribe(_g, listener) { localListeners.add(listener); return () => localListeners.delete(listener); },
   async leaveGroup() {},
+  async getRecentPosts() { return []; },
 };
 
 // ===========================================================================
@@ -182,6 +183,15 @@ const supaApi = {
     await ensureSession();
     await supabase.rpc('leave_group', { p_group_id: groupId });
   },
+
+  async getRecentPosts(groupIds) {
+    if (!groupIds?.length) return [];
+    const { data, error } = await supabase.from('posts')
+      .select('id, group_id, author_name, type, text, created_at')
+      .in('group_id', groupIds).order('created_at', { ascending: false }).limit(40);
+    if (error) return [];
+    return (data || []).map((p) => ({ id: p.id, groupId: p.group_id, author: p.author_name, type: p.type, text: p.text, createdAt: new Date(p.created_at).getTime() }));
+  },
 };
 
 // ===========================================================================
@@ -198,4 +208,5 @@ export const deletePost = (...a) => api.deletePost(...a);
 export const subscribe = (...a) => api.subscribe(...a);
 export const touchPresence = (...a) => api.touchPresence(...a);
 export const leaveGroup = (...a) => api.leaveGroup(...a);
+export const getRecentPosts = (...a) => api.getRecentPosts(...a);
 export const backendMode = isBackendConfigured() ? 'supabase' : 'local';

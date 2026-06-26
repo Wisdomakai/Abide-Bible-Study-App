@@ -9,10 +9,11 @@ import { addPost } from '../data/api';
 import { dateKey } from '../data/storage';
 import { Card, Pill, Button } from '../components/ui';
 import GroupChooser from '../components/GroupChooser';
+import Bell from '../components/Bell';
 import { colors, fonts, spacing, radius, shadow } from '../theme';
 
 export default function TodayScreen({ navigation }) {
-  const { profile, saveReflection, streak, translation, setTranslation, groups } = useApp();
+  const { profile, saveReflection, streak, translation, setTranslation, groups, refreshNotifications } = useApp();
   const verse = getVerseForDate();
   const { text: verseText } = useVerseText(verse, translation);
   const [text, setText] = useState('');
@@ -22,6 +23,7 @@ export default function TodayScreen({ navigation }) {
   const toastTimer = useRef(null);
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
+  useEffect(() => navigation.addListener('focus', () => refreshNotifications && refreshNotifications()), [navigation, refreshNotifications]);
 
   const showToast = (msg, ok = true) => {
     setToast({ msg, ok });
@@ -80,6 +82,7 @@ export default function TodayScreen({ navigation }) {
               <Ionicons name="flame" size={16} color={colors.accent} />
               <Text style={styles.streakNum}>{streak.count}</Text>
             </View>
+            <Bell />
             <Pressable
               onPress={() => navigation.navigate('Settings')}
               hitSlop={8}

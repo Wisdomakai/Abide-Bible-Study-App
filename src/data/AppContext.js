@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { loadJSON, saveJSON, KEYS, uid, dateKey } from './storage';
-import { deletePost, getMyGroups, touchPresence } from './api';
+import { deletePost, getMyGroups, touchPresence, getRecentPosts } from './api';
 
 const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
@@ -65,6 +65,30 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (profile?.name) refreshGroups();
   }, [profile?.name, refreshGroups]);
+
+  // ── Notifications (in-app bell) ──
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const ids = groups.map((g) => g.id);
+      if (!ids.length) { setNotifications([]); setUnreadCount(0); return; }
+      const posts = await getRecentPosts(ids);
+      const nameOf = (id) => groups.find((g) => g.id === id)?.name || 'Group';
+      const list = posts.filter((p) => p.author !== profile?.name).map((p) => ({ ...p, group: nameOf(p.groupId) }));
+      const lastSeen = await loadJSON(KEYS.lastNotif, 0);
+      setNotifications(list);
+      setUnreadCount(list.filter((p) => p.createdAt > lastSeen).length);
+    } catch (_) {}
+  }, [groups, profile?.name]);
+
+  const markNotificationsRead = useCallback(async () => {
+    await saveJSON(KEYS.lastNotif, Date.now());
+    setUnreadCount(0);
+  }, []);
+
+  useEffect(() => { if (groups.length) refreshNotifications(); }, [groups, refreshNotifications]);
 
   // ── Profile ── (accepts a name string or a partial patch object)
   const saveProfile = useCallback((patch) => {
@@ -173,6 +197,7 @@ export function AppProvider({ children }) {
     translation, setTranslation,
     groups, groupsLoading, selectedGroupId, selectGroup, refreshGroups,
     selectedGroup: groups.find((g) => g.id === selectedGroupId) || null,
+    notifications, unreadCount, refreshNotifications, markNotificationsRead,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

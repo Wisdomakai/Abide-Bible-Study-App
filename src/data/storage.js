@@ -26,6 +26,8 @@ export const KEYS = {
   streak: 'bj.streak',
   translation: 'bj.translation',
   selectedGroup: 'bj.selectedGroup',
+  biblePos: 'bj.biblePos',
+  lastNotif: 'bj.lastNotif',
 };
 
 export function uid() {

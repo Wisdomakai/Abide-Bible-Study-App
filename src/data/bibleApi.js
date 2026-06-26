@@ -46,6 +46,32 @@ async function fromBibleApiCom(ref, translation) {
   return json?.text ? json.text.replace(/\s+/g, ' ').trim() : null;
 }
 
+// bible-api.com supports public-domain translations by code (KJV, WEB…).
+// NIV/NLT aren't available there, so the reader shows KJV for those.
+const CHAPTER_CODE = { KJV: 'kjv', WEB: 'web', NIV: 'kjv', NLT: 'kjv' };
+const CHAPTER_CACHE = 'bj.chapterCache';
+
+// Fetch a whole chapter: returns { verses: [{ verse, text }], translationName }.
+export async function fetchChapter(book, chapter, translation = 'KJV') {
+  const code = CHAPTER_CODE[translation] || 'kjv';
+  const key = `${book}|${chapter}|${code}`;
+  const cache = await loadJSON(CHAPTER_CACHE, {});
+  if (cache[key]) return cache[key];
+
+  const url = `https://bible-api.com/${encodeURIComponent(book + ' ' + chapter)}?translation=${code}`;
+  const res = await fetchWithTimeout(url, {}, 12000);
+  if (!res.ok) throw new Error('Could not load chapter');
+  const json = await res.json();
+  const out = {
+    verses: (json.verses || []).map((v) => ({ verse: v.verse, text: (v.text || '').replace(/\s+/g, ' ').trim() })),
+    translationName: json.translation_name || 'King James Version',
+    code,
+  };
+  cache[key] = out;
+  saveJSON(CHAPTER_CACHE, cache);
+  return out;
+}
+
 // Returns the verse text from the network, or null if unavailable.
 export async function fetchVerseText(ref, translation) {
   const cache = await loadJSON(CACHE_KEY, {});
