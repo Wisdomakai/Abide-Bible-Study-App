@@ -11,11 +11,11 @@ export default function OnboardingScreen() {
   const { saveProfile } = useApp();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [code, setCode] = useState('');
+  const [picker, setPicker] = useState({ code: '', groupName: '' });
 
   const finish = () => {
-    if (!name.trim() || !code) return;
-    saveProfile({ name: name.trim(), groupCode: code, groupName: 'Our Bible Study' });
+    if (!name.trim() || !picker.code) return;
+    saveProfile({ name: name.trim(), groupCode: picker.code, groupName: picker.groupName || 'Our Bible Study' });
   };
 
   return (
@@ -48,7 +48,7 @@ export default function OnboardingScreen() {
           ) : (
             <>
               <Text style={styles.tagline}>Hi {name.trim()}. Start a new study group, or join one your mates already created.</Text>
-              <GroupPicker onChange={setCode} />
+              <GroupPicker onChange={setPicker} />
             </>
           )}
         </ScrollView>
@@ -58,7 +58,7 @@ export default function OnboardingScreen() {
             <Button title="Continue" icon="arrow-forward" disabled={!name.trim()} onPress={() => setStep(2)} />
           ) : (
             <>
-              <Button title="Begin" icon="checkmark" disabled={!code} onPress={finish} />
+              <Button title="Begin" icon="checkmark" disabled={!picker.code} onPress={finish} />
               <Button title="Back" variant="ghost" onPress={() => setStep(1)} style={{ marginTop: spacing.sm }} />
             </>
           )}

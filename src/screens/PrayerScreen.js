@@ -4,13 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../data/AppContext';
 import { addPost } from '../data/api';
+import GroupChooser from '../components/GroupChooser';
 import { Card, EmptyState, timeAgo } from '../components/ui';
 import { colors, fonts, spacing, radius, shadow } from '../theme';
 
 export default function PrayerScreen() {
-  const { prayers, addPrayer, togglePrayerAnswered, deletePrayer, setPrayerShared, profile } = useApp();
+  const { prayers, addPrayer, togglePrayerAnswered, deletePrayer, setPrayerShared, profile, groups } = useApp();
   const [draft, setDraft] = useState('');
   const [tab, setTab] = useState('active'); // 'active' | 'answered'
+  const [pendingPrayer, setPendingPrayer] = useState(null);
 
   const list = useMemo(
     () => prayers.filter((p) => (tab === 'answered' ? p.answered : !p.answered)),
@@ -24,10 +26,17 @@ export default function PrayerScreen() {
     setDraft('');
   };
 
-  const shareToGroup = async (p) => {
-    const post = await addPost({ author: profile.name, type: 'prayer', text: p.text });
-    setPrayerShared(p.id, post.id); // link so deleting the prayer removes the post
-    Alert.alert('Shared', 'Your prayer request was posted to the group feed.');
+  const shareToGroup = (p) => {
+    if (groups.length === 0) { Alert.alert('No group yet', 'Create or join a group first (Group tab).'); return; }
+    if (groups.length === 1) sharePrayerTo(groups[0], p);
+    else setPendingPrayer(p);
+  };
+
+  const sharePrayerTo = async (group, p) => {
+    setPendingPrayer(null);
+    const post = await addPost(group.id, { author: profile.name, type: 'prayer', text: p.text });
+    setPrayerShared(p.id, post.id);
+    Alert.alert('Shared', `Your prayer request was posted to ${group.name}.`);
   };
 
   return (
@@ -112,6 +121,7 @@ export default function PrayerScreen() {
           </Card>
         )}
       />
+      <GroupChooser visible={!!pendingPrayer} groups={groups} onPick={(g) => sharePrayerTo(g, pendingPrayer)} onClose={() => setPendingPrayer(null)} />
     </SafeAreaView>
   );
 }

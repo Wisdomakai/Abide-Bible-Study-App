@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { loadJSON, saveJSON, KEYS, uid, dateKey } from './storage';
-import { deletePost } from './api';
+import { deletePost, getMyGroups, touchPresence } from './api';
 
 const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
@@ -33,6 +33,38 @@ export function AppProvider({ children }) {
     setTranslationState(t);
     saveJSON(KEYS.translation, t);
   }, []);
+
+  // ── Groups (multi-group) ──
+  const [groups, setGroups] = useState([]);
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+
+  const refreshGroups = useCallback(async () => {
+    setGroupsLoading(true);
+    try {
+      await touchPresence();
+      const gs = await getMyGroups();
+      setGroups(gs);
+      const stored = await loadJSON(KEYS.selectedGroup, null);
+      setSelectedGroupId((prev) => {
+        const has = (id) => gs.some((g) => g.id === id);
+        return has(prev) ? prev : has(stored) ? stored : (gs[0]?.id || null);
+      });
+    } catch (_) {
+      // offline / not yet configured — leave groups as-is
+    } finally {
+      setGroupsLoading(false);
+    }
+  }, []);
+
+  const selectGroup = useCallback((id) => {
+    setSelectedGroupId(id);
+    saveJSON(KEYS.selectedGroup, id);
+  }, []);
+
+  useEffect(() => {
+    if (profile?.name) refreshGroups();
+  }, [profile?.name, refreshGroups]);
 
   // ── Profile ── (accepts a name string or a partial patch object)
   const saveProfile = useCallback((patch) => {
@@ -139,6 +171,8 @@ export function AppProvider({ children }) {
     prayers, addPrayer, togglePrayerAnswered, deletePrayer, setPrayerShared,
     streak,
     translation, setTranslation,
+    groups, groupsLoading, selectedGroupId, selectGroup, refreshGroups,
+    selectedGroup: groups.find((g) => g.id === selectedGroupId) || null,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

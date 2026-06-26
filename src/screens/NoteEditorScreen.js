@@ -3,12 +3,14 @@ import { View, Text, TextInput, ScrollView, StyleSheet, Pressable, Alert } from 
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../data/AppContext';
 import { addPost } from '../data/api';
+import GroupChooser from '../components/GroupChooser';
 import { colors, fonts, spacing, radius } from '../theme';
 
 export default function NoteEditorScreen({ route, navigation }) {
   const { id } = route.params || {};
-  const { notes, upsertNote, deleteNote, profile } = useApp();
+  const { notes, upsertNote, deleteNote, profile, groups } = useApp();
   const [noteId, setNoteId] = useState(id);
+  const [pendingShare, setPendingShare] = useState(null); // text awaiting group choice
   const existing = notes.find((n) => n.id === noteId);
 
   const [title, setTitle] = useState(existing?.title || '');
@@ -33,13 +35,21 @@ export default function NoteEditorScreen({ route, navigation }) {
     });
   });
 
-  const onShare = async () => {
+  const onShare = () => {
     if (!body.trim() && !title.trim()) return;
-    const savedId = persist();           // make sure the note exists & is current
+    if (groups.length === 0) { Alert.alert('No group yet', 'Create or join a group first (Group tab).'); return; }
+    const text = (title ? title + '\n\n' : '') + body;
+    if (groups.length === 1) shareTo(groups[0], text);
+    else setPendingShare(text);
+  };
+
+  const shareTo = async (group, text) => {
+    setPendingShare(null);
+    const savedId = persist();
     setNoteId(savedId);
-    const post = await addPost({ author: profile.name, type: 'note', text: (title ? title + '\n\n' : '') + body });
-    upsertNote({ id: savedId, sharedPostId: post.id }); // link so deleting the note removes the post
-    Alert.alert('Shared', 'Your note was posted to the group feed.');
+    const post = await addPost(group.id, { author: profile.name, type: 'note', text });
+    upsertNote({ id: savedId, sharedPostId: post.id });
+    Alert.alert('Shared', `Your note was posted to ${group.name}.`);
   };
 
   const confirmDelete = () => {
@@ -92,6 +102,13 @@ export default function NoteEditorScreen({ route, navigation }) {
           </Pressable>
         ) : null}
       </View>
+
+      <GroupChooser
+        visible={!!pendingShare}
+        groups={groups}
+        onPick={(g) => shareTo(g, pendingShare)}
+        onClose={() => setPendingShare(null)}
+      />
     </ScrollView>
   );
 }

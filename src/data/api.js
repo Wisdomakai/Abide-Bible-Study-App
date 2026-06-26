@@ -1,213 +1,186 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GROUP FEED — data layer with two interchangeable backends.
+// GROUP DATA LAYER — multi-group aware.
 //
-// The four functions below are the ONLY thing the screens call:
-//   getFeed()                  -> Post[]
-//   addPost({author, type, text, ref})
+// Screens call these. Each feed/post call takes a groupId so a user can belong
+// to several groups and read/post to whichever they pick.
+//   ensureSession()                         -> signs in (anon) if needed
+//   joinGroupByCode(code, name, gName, admin)-> group id (creates if new)
+//   getMyGroups()                           -> [{ id, name, code, adminName, members, lastPost }]
+//   getFeed(groupId)                        -> Post[]
+//   addPost(groupId, { author, type, text, ref })
 //   toggleAmen(postId, name)
-//   subscribe(listener)        -> unsubscribe()
+//   deletePost(postId)
+//   subscribe(groupId, listener)            -> unsubscribe()
+//   touchPresence()                         -> stamp last_seen / login
+//   leaveGroup(groupId)
 //
-// • If Supabase keys are set in config.js  -> REAL shared feed (Postgres + Realtime)
-// • Otherwise                              -> LOCAL on-device feed (seeded demo)
-//
-// Post shape stays identical in both modes:
-//   { id, author, type, text, ref, amens: string[], createdAt: number(ms) }
+// Post shape: { id, author, type, text, ref, amens: string[], createdAt: number }
 // ─────────────────────────────────────────────────────────────────────────────
 import { loadJSON, saveJSON, uid, KEYS } from './storage';
 import { isBackendConfigured, GROUP_CODE, GROUP_NAME } from './config';
 import { supabase } from './supabase';
 
 // ===========================================================================
-// LOCAL backend (no server) — keeps the app fully working without any setup.
+// LOCAL backend (no server) — single on-device group, ignores groupId.
 // ===========================================================================
 const FEED_KEY = 'bj.groupFeed';
 const localListeners = new Set();
 
 function seed() {
-  const now = Date.now();
-  const hr = 3600 * 1000;
+  const now = Date.now(), hr = 3600 * 1000;
   return [
-    { id: uid(), author: 'Ama', type: 'reflection', ref: 'Psalm 23:1-3',
-      text: 'Reading this slowly today, "he refreshes my soul" really stood out. I needed that reminder after a hard week.',
-      amens: ['Kojo', 'Esi'], createdAt: now - 2 * hr },
-    { id: uid(), author: 'Kojo', type: 'prayer',
-      text: 'Please pray for my mum’s surgery on Thursday. Trusting God for steady hands and peace for the family.',
-      amens: ['Ama', 'Esi', 'Yaw'], createdAt: now - 6 * hr },
-    { id: uid(), author: 'Esi', type: 'note',
-      text: 'Group thought: what does it look like to "seek first the kingdom" in our ordinary Monday routines?',
-      amens: ['Kojo'], createdAt: now - 26 * hr },
+    { id: uid(), author: 'Ama', type: 'reflection', ref: 'Psalm 23:1-3', text: '"He refreshes my soul" really stood out today.', amens: ['Kojo'], createdAt: now - 2 * hr },
   ];
 }
-
 async function localRead() {
-  let feed = await loadJSON(FEED_KEY, null);
-  if (!feed) { feed = seed(); await saveJSON(FEED_KEY, feed); }
-  return feed;
+  let f = await loadJSON(FEED_KEY, null);
+  if (!f) { f = seed(); await saveJSON(FEED_KEY, f); }
+  return f;
 }
-function localNotify(feed) { localListeners.forEach((fn) => fn(feed)); }
-
 const localApi = {
-  async getFeed() {
-    return [...(await localRead())].sort((a, b) => b.createdAt - a.createdAt);
+  async ensureSession() {},
+  async touchPresence() {},
+  async joinGroupByCode() { return 'local'; },
+  async getMyGroups() {
+    const p = await loadJSON(KEYS.profile, {});
+    return [{ id: 'local', name: p?.groupName || 'My Group', code: p?.groupCode || 'local', adminName: p?.name || 'You', members: 1, lastPost: null }];
   },
-  async addPost({ author, type, text, ref }) {
-    const feed = await localRead();
+  async getFeed() { return [...(await localRead())].sort((a, b) => b.createdAt - a.createdAt); },
+  async addPost(_g, { author, type, text, ref }) {
+    const f = await localRead();
     const post = { id: uid(), author, type, text, ref: ref || null, amens: [], createdAt: Date.now() };
-    const next = [post, ...feed];
-    await saveJSON(FEED_KEY, next);
-    localNotify(next);
+    const next = [post, ...f]; await saveJSON(FEED_KEY, next); localListeners.forEach((fn) => fn(next));
     return post;
   },
   async toggleAmen(postId, userId) {
-    const feed = await localRead();
-    const next = feed.map((p) => {
-      if (p.id !== postId) return p;
-      const has = p.amens.includes(userId);
-      return { ...p, amens: has ? p.amens.filter((u) => u !== userId) : [...p.amens, userId] };
-    });
-    await saveJSON(FEED_KEY, next);
-    localNotify(next);
+    const f = await localRead();
+    const next = f.map((p) => p.id !== postId ? p : { ...p, amens: p.amens.includes(userId) ? p.amens.filter((u) => u !== userId) : [...p.amens, userId] });
+    await saveJSON(FEED_KEY, next); localListeners.forEach((fn) => fn(next));
     return next.find((p) => p.id === postId);
   },
   async deletePost(postId) {
-    if (!postId) return;
-    const feed = await localRead();
-    const next = feed.filter((p) => p.id !== postId);
-    await saveJSON(FEED_KEY, next);
-    localNotify(next);
+    const f = await localRead(); const next = f.filter((p) => p.id !== postId);
+    await saveJSON(FEED_KEY, next); localListeners.forEach((fn) => fn(next));
   },
-  subscribe(listener) {
-    localListeners.add(listener);
-    return () => localListeners.delete(listener);
-  },
+  subscribe(_g, listener) { localListeners.add(listener); return () => localListeners.delete(listener); },
+  async leaveGroup() {},
 };
 
 // ===========================================================================
-// SUPABASE backend — real shared feed across phones.
+// SUPABASE backend — real, multi-group.
 // ===========================================================================
-let groupIdPromise = null;
+let sessionPromise = null;
 
-// Lazily: sign in anonymously, then join/create the group by code (also upserts
-// the display name). Cached so it only runs once per launch.
-async function ensureReady() {
-  if (!groupIdPromise) {
-    groupIdPromise = (async () => {
-      // Validate against the server (getUser), not just the cached session, so a
-      // device whose account was deleted re-signs-in cleanly instead of erroring.
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const { error } = await supabase.auth.signInAnonymously();
-        if (error) throw error;
-      }
-      const profile = await loadJSON(KEYS.profile, { name: 'Friend' });
-      // The user's own group code (chosen at onboarding) wins; fall back to the
-      // config default so already-onboarded users keep their existing group.
-      const code = profile?.groupCode || GROUP_CODE;
-      const name = profile?.groupName || GROUP_NAME;
-      const { data, error } = await supabase.rpc('join_group', {
-        p_code: code,
-        p_name: profile?.name || 'Friend',
-        p_group_name: name,
-      });
-      if (error) throw error;
-      return data; // group id
-    })().catch((e) => { groupIdPromise = null; throw e; });
+async function ensureSessionInner() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) throw error;
   }
-  return groupIdPromise;
 }
-
-// Call after the user creates/joins a different group so the next feed call rebinds.
-export function resetGroup() {
-  groupIdPromise = null;
+function ensureSession() {
+  if (!sessionPromise) sessionPromise = ensureSessionInner().catch((e) => { sessionPromise = null; throw e; });
+  return sessionPromise;
 }
-
-// Record an app open (updates profiles.last_seen via join_group). No-op locally.
-export async function touchPresence() {
-  if (!isBackendConfigured()) return;
-  try { await ensureReady(); } catch (_) {}
-}
-
 async function currentUserId() {
   const { data } = await supabase.auth.getUser();
   return data?.user?.id;
 }
-
 function mapRow(r) {
-  return {
-    id: r.id,
-    author: r.author,
-    type: r.type,
-    text: r.text,
-    ref: r.ref,
-    amens: r.amens || [],
-    createdAt: new Date(r.created_at).getTime(),
-  };
+  return { id: r.id, author: r.author, type: r.type, text: r.text, ref: r.ref, amens: r.amens || [], createdAt: new Date(r.created_at).getTime() };
 }
 
 const supaApi = {
-  async getFeed() {
-    const groupId = await ensureReady();
-    const { data, error } = await supabase
-      .from('feed_with_amens')
-      .select('*')
-      .eq('group_id', groupId)
-      .order('created_at', { ascending: false });
+  ensureSession,
+
+  async joinGroupByCode(code, name, groupName, adminName) {
+    await ensureSession();
+    // Prefer the multi-group signature (with admin name); fall back to the older
+    // 3-arg one if multigroup.sql hasn't been run yet.
+    let res = await supabase.rpc('join_group', {
+      p_code: code, p_name: name, p_group_name: groupName || GROUP_NAME, p_admin_name: adminName || name,
+    });
+    if (res.error) {
+      res = await supabase.rpc('join_group', { p_code: code, p_name: name, p_group_name: groupName || GROUP_NAME });
+    }
+    if (res.error) throw res.error;
+    return res.data;
+  },
+
+  async touchPresence() {
+    await ensureSession();
+    const profile = await loadJSON(KEYS.profile, null);
+    if (profile?.groupCode) {
+      // Ensures membership in the user's default group + stamps last_seen/login.
+      try { await supaApi.joinGroupByCode(profile.groupCode, profile.name, profile.groupName, profile.name); } catch (_) {}
+    }
+  },
+
+  async getMyGroups() {
+    await ensureSession();
+    // Rich RPC (member counts + admin name) when available…
+    const rpc = await supabase.rpc('my_groups');
+    if (!rpc.error && rpc.data) {
+      return rpc.data.map((g) => ({
+        id: g.id, name: g.name, code: g.code, adminName: g.admin_name,
+        members: Number(g.members) || 0, lastPost: g.last_post ? new Date(g.last_post).getTime() : null,
+      }));
+    }
+    // …otherwise list groups via memberships (works before multigroup.sql).
+    const uid = await currentUserId();
+    const { data } = await supabase.from('memberships').select('group_id, groups(id, name, code)').eq('user_id', uid);
+    return (data || []).filter((m) => m.groups).map((m) => ({
+      id: m.groups.id, name: m.groups.name, code: m.groups.code, adminName: null, members: 0, lastPost: null,
+    }));
+  },
+
+  async getFeed(groupId) {
+    if (!groupId) return [];
+    const { data, error } = await supabase.from('feed_with_amens').select('*').eq('group_id', groupId).order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []).map(mapRow);
   },
 
-  async addPost({ author, type, text, ref }) {
-    const groupId = await ensureReady();
+  async addPost(groupId, { author, type, text, ref }) {
     const userId = await currentUserId();
-    const { data, error } = await supabase
-      .from('posts')
+    const { data, error } = await supabase.from('posts')
       .insert({ group_id: groupId, author_id: userId, author_name: author, type, text, ref: ref || null })
-      .select()
-      .single();
+      .select().single();
     if (error) throw error;
     return { id: data.id, author, type, text, ref: ref || null, amens: [], createdAt: new Date(data.created_at).getTime() };
   },
 
   async toggleAmen(postId, voterName) {
-    await ensureReady();
     const userId = await currentUserId();
-    const { data: existing } = await supabase
-      .from('amens')
-      .select('post_id')
-      .eq('post_id', postId)
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (existing) {
-      await supabase.from('amens').delete().eq('post_id', postId).eq('user_id', userId);
-    } else {
-      await supabase.from('amens').insert({ post_id: postId, user_id: userId, voter_name: voterName });
-    }
+    const { data: existing } = await supabase.from('amens').select('post_id').eq('post_id', postId).eq('user_id', userId).maybeSingle();
+    if (existing) await supabase.from('amens').delete().eq('post_id', postId).eq('user_id', userId);
+    else await supabase.from('amens').insert({ post_id: postId, user_id: userId, voter_name: voterName });
     const { data } = await supabase.from('feed_with_amens').select('*').eq('id', postId).single();
     return data ? mapRow(data) : null;
   },
 
   async deletePost(postId) {
     if (!postId) return;
-    await ensureReady();
-    // RLS (posts_delete) only lets the author delete their own post.
+    await ensureSession();
     await supabase.from('posts').delete().eq('id', postId);
   },
 
-  subscribe(listener) {
-    let channel;
-    let cancelled = false;
-    const reload = async () => {
-      try { const feed = await supaApi.getFeed(); if (!cancelled) listener(feed); } catch (_) {}
-    };
-    ensureReady().then((groupId) => {
-      if (cancelled) return;
-      channel = supabase
-        .channel(`group-${groupId}`)
+  subscribe(groupId, listener) {
+    let channel, cancelled = false;
+    const reload = async () => { try { const f = await supaApi.getFeed(groupId); if (!cancelled) listener(f); } catch (_) {} };
+    ensureSession().then(() => {
+      if (cancelled || !groupId) return;
+      channel = supabase.channel(`group-${groupId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'posts', filter: `group_id=eq.${groupId}` }, reload)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'amens' }, reload)
         .subscribe();
     });
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel); };
+  },
+
+  async leaveGroup(groupId) {
+    await ensureSession();
+    await supabase.rpc('leave_group', { p_group_id: groupId });
   },
 };
 
@@ -216,9 +189,13 @@ const supaApi = {
 // ===========================================================================
 const api = isBackendConfigured() ? supaApi : localApi;
 
+export const joinGroupByCode = (...a) => api.joinGroupByCode(...a);
+export const getMyGroups = (...a) => api.getMyGroups(...a);
 export const getFeed = (...a) => api.getFeed(...a);
 export const addPost = (...a) => api.addPost(...a);
 export const toggleAmen = (...a) => api.toggleAmen(...a);
 export const deletePost = (...a) => api.deletePost(...a);
 export const subscribe = (...a) => api.subscribe(...a);
+export const touchPresence = (...a) => api.touchPresence(...a);
+export const leaveGroup = (...a) => api.leaveGroup(...a);
 export const backendMode = isBackendConfigured() ? 'supabase' : 'local';

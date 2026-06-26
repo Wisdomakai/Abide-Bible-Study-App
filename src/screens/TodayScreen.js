@@ -8,14 +8,16 @@ import useVerseText from '../hooks/useVerseText';
 import { addPost } from '../data/api';
 import { dateKey } from '../data/storage';
 import { Card, Pill, Button } from '../components/ui';
+import GroupChooser from '../components/GroupChooser';
 import { colors, fonts, spacing, radius, shadow } from '../theme';
 
 export default function TodayScreen({ navigation }) {
-  const { profile, reflections, saveReflection, streak, translation, setTranslation } = useApp();
+  const { profile, saveReflection, streak, translation, setTranslation, groups } = useApp();
   const verse = getVerseForDate();
   const { text: verseText } = useVerseText(verse, translation);
   const [text, setText] = useState('');
   const [sharing, setSharing] = useState(false);
+  const [chooseGroup, setChooseGroup] = useState(false);
   const [toast, setToast] = useState(null); // { msg, ok }
   const toastTimer = useRef(null);
 
@@ -42,13 +44,20 @@ export default function TodayScreen({ navigation }) {
     showToast('Reflection saved');
   };
 
-  const onShare = async () => {
+  const onShare = () => {
     if (!text.trim()) { showToast('Write something first', false); return; }
+    if (groups.length === 0) { showToast('Join or create a group first', false); return; }
+    if (groups.length === 1) shareTo(groups[0]);
+    else setChooseGroup(true);
+  };
+
+  const shareTo = async (group) => {
+    setChooseGroup(false);
     setSharing(true);
     Keyboard.dismiss();
     try {
-      await addPost({ author: profile.name, type: 'reflection', ref: verse.ref, text: text.trim() });
-      showToast('Shared with your group ✓');
+      await addPost(group.id, { author: profile.name, type: 'reflection', ref: verse.ref, text: text.trim() });
+      showToast(`Shared to ${group.name} ✓`);
     } catch (e) {
       showToast('Couldn’t share — check your connection', false);
     } finally {
@@ -147,6 +156,7 @@ export default function TodayScreen({ navigation }) {
           <Text style={styles.shareHint}>Tap the people icon to share this reflection with your group.</Text>
         )}
       </ScrollView>
+      <GroupChooser visible={chooseGroup} groups={groups} onPick={shareTo} onClose={() => setChooseGroup(false)} />
     </SafeAreaView>
   );
 }

@@ -1,27 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useApp } from '../data/AppContext';
-import { resetGroup } from '../data/api';
+import { joinGroupByCode } from '../data/api';
 import GroupPicker from '../components/GroupPicker';
 import { Button } from '../components/ui';
 import { colors, fonts, spacing } from '../theme';
 
 export default function JoinGroupScreen({ navigation }) {
-  const { saveProfile } = useApp();
-  const [code, setCode] = useState('');
+  const { profile, refreshGroups, selectGroup } = useApp();
+  const [picker, setPicker] = useState({ code: '', groupName: '' });
+  const [busy, setBusy] = useState(false);
 
-  const apply = () => {
-    if (!code) return;
-    saveProfile({ groupCode: code, groupName: 'Our Bible Study' });
-    resetGroup(); // rebind the feed to the new group on next load
-    navigation.goBack();
+  const apply = async () => {
+    if (!picker.code) return;
+    setBusy(true);
+    try {
+      const id = await joinGroupByCode(picker.code, profile.name, picker.groupName || 'Bible Study', profile.name);
+      await refreshGroups();
+      if (id) selectGroup(id);
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('Couldn’t join', 'Please check the code and your connection, then try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.intro}>Create a new group or join one with a code your mates shared. Your journal and prayers stay with you — only the shared feed changes.</Text>
-      <GroupPicker onChange={setCode} />
-      <Button title="Save group" icon="checkmark" disabled={!code} onPress={apply} style={{ marginTop: spacing.xl }} />
+      <Text style={styles.intro}>Start a new group or join one with a code your mates shared. You can belong to several groups and switch between them.</Text>
+      <GroupPicker onChange={setPicker} />
+      <Button title={busy ? 'Saving…' : 'Save group'} icon="checkmark" disabled={!picker.code || busy} onPress={apply} style={{ marginTop: spacing.xl }} />
     </View>
   );
 }

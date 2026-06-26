@@ -25,6 +25,7 @@ export const KEYS = {
   prayers: 'bj.prayers',
   streak: 'bj.streak',
   translation: 'bj.translation',
+  selectedGroup: 'bj.selectedGroup',
 };
 
 export function uid() {
