@@ -46,7 +46,7 @@ export default function SettingsScreen({ navigation }) {
 
   const shareCode = () =>
     Share.share({
-      message: `Join our Bible study group on Abide. Open the app, tap "Join", and enter this code: ${groupCode}`,
+      message: `Join our Bible study group on Ardent. Open the app, tap "Join", and enter this code: ${groupCode}`,
     });
 
   return (
@@ -124,7 +124,7 @@ export default function SettingsScreen({ navigation }) {
 
       <View style={styles.footer}>
         <Ionicons name="book" size={18} color={colors.faint} />
-        <Text style={styles.footText}>Abide · made for Bible study together</Text>
+        <Text style={styles.footText}>Ardent · made for Bible study together</Text>
       </View>
     </ScrollView>
   );

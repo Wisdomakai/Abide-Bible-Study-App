@@ -36,3 +36,6 @@ yarn-error.*
 
 # Generated icon helper (not needed in repo)
 gen-icons.mjs
+
+# Supabase CLI cache
+supabase/.temp/

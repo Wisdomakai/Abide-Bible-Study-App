@@ -1,18 +1,16 @@
-# Google Play — store listing copy for Abide
+# Google Play — store listing copy for Ardent
 
 ## App name (max 30 chars)
-`Abide: Bible Study Journal`  (26 chars)
+`Ardent: Bible Study Journal`  (27 chars)
 
-> ⚠️ Name check: there is already a popular prayer app called **"Abide"** on Play.
-> Yours can coexist (different package name), but to avoid confusion / a possible
-> trademark complaint, consider a more distinct title such as:
-> `Abide Together — Study Journal` or `Abide Group Bible Journal`.
+> Tip: before publishing, search Play for "Ardent" to confirm the exact title isn't taken.
+> The package name `com.biblejournal.app` is what must be unique, and it already is.
 
 ## Short description (max 80 chars)
 `A simple journal for Bible study groups — daily verses, reflections, prayer.`  (75)
 
 ## Full description (max 4000 chars)
-Abide is a calm, simple place for your Bible study group to grow together.
+Ardent is a calm, simple place for your Bible study group to grow together.
 
 Each day opens with a shared Verse of the Day — the same passage for everyone in your
 group — in your choice of KJV, NIV, or NLT. Read it, then write what God is saying to you.
@@ -26,7 +24,7 @@ group — in your choice of KJV, NIV, or NLT. Read it, then write what God is sa
 • Join your group with a simple invite code — no email or password needed
 • Your personal journal stays private on your device
 
-Whether you meet weekly or stay connected through the week, Abide helps your group
+Whether you meet weekly or stay connected through the week, Ardent helps your group
 study, reflect, and pray — together.
 
 Made with love for Bible study groups.
@@ -52,7 +50,7 @@ Made with love for Bible study groups.
 
 ## Content rating
 Complete the questionnaire (Play Console → App content → Content rating).
-Abide has no objectionable content → expect "Everyone".
+Ardent has no objectionable content → expect "Everyone".
 
 ## Category
 Books & Reference (or Lifestyle).

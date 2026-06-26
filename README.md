@@ -1,4 +1,4 @@
-# Abide — Bible Study Journal
+# Ardent — Bible Study Journal
 
 A calm, modern journaling app for a Bible study group. Built with **Expo (React Native)** so it runs as a real app on iOS and Android.
 

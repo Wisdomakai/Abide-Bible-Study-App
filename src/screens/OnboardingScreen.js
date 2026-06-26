@@ -25,7 +25,7 @@ export default function OnboardingScreen() {
           <View style={styles.mark}>
             <Ionicons name="book" size={32} color={colors.white} />
           </View>
-          <Text style={styles.brand}>Abide</Text>
+          <Text style={styles.brand}>Ardent</Text>
 
           {step === 1 ? (
             <>

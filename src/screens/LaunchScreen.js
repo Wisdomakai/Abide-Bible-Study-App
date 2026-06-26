@@ -28,12 +28,12 @@ export default function LaunchScreen() {
             <Ionicons name="book" size={44} color={colors.white} />
           </View>
         </Animated.View>
-        <Text style={styles.wordmark}>Abide</Text>
+        <Text style={styles.wordmark}>Ardent</Text>
         <Text style={styles.tagline}>Study · Reflect · Pray · Together</Text>
       </Animated.View>
 
       <Animated.Text style={[styles.verse, { opacity: fade }]}>
-        “Abide in me, and I in you.”{'\n'}John 15:4
+        “Never be lacking in zeal, but keep your spiritual fervor.”{'\n'}Romans 12:11
       </Animated.Text>
     </View>
   );

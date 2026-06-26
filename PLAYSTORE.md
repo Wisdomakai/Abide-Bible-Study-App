@@ -1,4 +1,4 @@
-# Publishing Abide to the Google Play Store
+# Publishing Ardent to the Google Play Store
 
 A start-to-finish checklist. The build runs in Expo's cloud; the rest is the Play Console
 (web). Plan ~1–2 hours for first-time setup, then Google reviews the app (hours–days).
@@ -28,7 +28,7 @@ Easiest: GitHub Pages from your repo.
    (Open it to confirm, then use this as the privacy policy URL in Play.)
 
 ## 3. Create the app in Play Console
-- Play Console → **Create app** → name `Abide: Bible Study Journal` (see store/listing.md
+- Play Console → **Create app** → name `Ardent: Bible Study Journal` (see store/listing.md
   about the name), language, **App**, **Free** → create.
 - Work through **Set up your app / Dashboard** tasks:
   - **App access** — all features available without special login → "All functionality is available without restrictions" (anonymous account is automatic).
