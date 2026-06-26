@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius, shadow } from '../theme';
 
@@ -70,6 +70,27 @@ export function EmptyState({ icon, title, subtitle }) {
       <Text style={styles.emptyTitle}>{title}</Text>
       {subtitle ? <Text style={styles.emptySub}>{subtitle}</Text> : null}
     </View>
+  );
+}
+
+const URL_RE = /(https?:\/\/[^\s]+)/g;
+// Renders text with any URLs as tappable links that open in the device browser.
+export function LinkText({ children, style }) {
+  const text = String(children ?? '');
+  if (!URL_RE.test(text)) return <Text style={style}>{text}</Text>;
+  const parts = text.split(URL_RE);
+  return (
+    <Text style={style}>
+      {parts.map((p, i) =>
+        /^https?:\/\//.test(p) ? (
+          <Text key={i} style={{ color: colors.primary, textDecorationLine: 'underline' }} onPress={() => Linking.openURL(p).catch(() => {})}>
+            {p}
+          </Text>
+        ) : (
+          p
+        )
+      )}
+    </Text>
   );
 }
 

@@ -14,14 +14,11 @@ export default function TodayScreen({ navigation }) {
   const { profile, reflections, saveReflection, streak, translation, setTranslation } = useApp();
   const verse = getVerseForDate();
   const { text: verseText } = useVerseText(verse, translation);
-  const todayKey = dateKey();
-  const existing = reflections[todayKey]?.text || '';
-  const [text, setText] = useState(existing);
+  const [text, setText] = useState('');
   const [sharing, setSharing] = useState(false);
   const [toast, setToast] = useState(null); // { msg, ok }
   const toastTimer = useRef(null);
 
-  useEffect(() => setText(existing), [existing]);
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   const showToast = (msg, ok = true) => {
@@ -40,6 +37,7 @@ export default function TodayScreen({ navigation }) {
   const onSave = () => {
     if (!text.trim()) { showToast('Write something first', false); return; }
     saveReflection(text);
+    setText('');
     Keyboard.dismiss();
     showToast('Reflection saved');
   };

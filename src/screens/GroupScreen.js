@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../data/AppContext';
 import { getFeed, addPost, toggleAmen, deletePost, subscribe } from '../data/api';
-import { Pill, EmptyState, timeAgo } from '../components/ui';
+import { Pill, EmptyState, timeAgo, LinkText } from '../components/ui';
 import { colors, fonts, spacing, radius, shadow } from '../theme';
 
 const TYPE_META = {
@@ -45,7 +45,15 @@ export default function GroupScreen() {
   const onDelete = (postId) => {
     Alert.alert('Delete message?', 'This removes it from the group for everyone.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await deletePost(postId); refresh(); } },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        setFeed((f) => f.filter((p) => p.id !== postId)); // optimistic: remove immediately
+        try {
+          await deletePost(postId);
+        } catch (e) {
+          Alert.alert('Couldn’t delete', 'Please check your connection and try again.');
+        }
+        refresh();
+      } },
     ]);
   };
 
@@ -81,7 +89,7 @@ export default function GroupScreen() {
               </View>
 
               {item.ref ? <Text style={styles.ref}>{item.ref}</Text> : null}
-              <Text style={styles.body}>{item.text}</Text>
+              <LinkText style={styles.body}>{item.text}</LinkText>
 
               <View style={styles.postFoot}>
                 <Pressable
