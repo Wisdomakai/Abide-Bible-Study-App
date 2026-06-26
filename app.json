@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Abide",
+    "slug": "bible-study-journal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "biblejournal",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "runtimeVersion": { "policy": "appVersion" },
+    "updates": {
+      "url": "https://u.expo.dev/b9e94f7f-e72c-4366-933f-55e878021161"
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "backgroundColor": "#4B3F9E",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.biblejournal.app"
+    },
+    "android": {
+      "package": "com.biblejournal.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4B3F9E"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#4B3F9E"
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b9e94f7f-e72c-4366-933f-55e878021161"
+      }
+    },
+    "owner": "bryan699"
+  }
+}

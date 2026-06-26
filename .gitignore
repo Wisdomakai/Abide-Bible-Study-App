@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+ios/
+android/
+
+# Metro
+.metro-health-check*
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+
+# Secrets / local env
+.env
+.env*.local
+
+# Native signing artifacts
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Generated icon helper (not needed in repo)
+gen-icons.mjs
