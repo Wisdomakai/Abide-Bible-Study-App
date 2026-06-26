@@ -17,11 +17,18 @@ export default function TodayScreen({ navigation }) {
   const todayKey = dateKey();
   const existing = reflections[todayKey]?.text || '';
   const [text, setText] = useState(existing);
-  const [saved, setSaved] = useState(false);
-  const savedTimer = useRef(null);
+  const [sharing, setSharing] = useState(false);
+  const [toast, setToast] = useState(null); // { msg, ok }
+  const toastTimer = useRef(null);
 
   useEffect(() => setText(existing), [existing]);
-  useEffect(() => () => clearTimeout(savedTimer.current), []);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  const showToast = (msg, ok = true) => {
+    setToast({ msg, ok });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2800);
+  };
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -31,19 +38,24 @@ export default function TodayScreen({ navigation }) {
   })();
 
   const onSave = () => {
+    if (!text.trim()) { showToast('Write something first', false); return; }
     saveReflection(text);
     Keyboard.dismiss();
-    setSaved(true);
-    clearTimeout(savedTimer.current);
-    savedTimer.current = setTimeout(() => setSaved(false), 2200);
+    showToast('Reflection saved');
   };
 
   const onShare = async () => {
-    if (!text.trim()) return;
-    await addPost({ author: profile.name, type: 'reflection', ref: verse.ref, text: text.trim() });
-    setSaved(true);
-    clearTimeout(savedTimer.current);
-    savedTimer.current = setTimeout(() => setSaved(false), 2200);
+    if (!text.trim()) { showToast('Write something first', false); return; }
+    setSharing(true);
+    Keyboard.dismiss();
+    try {
+      await addPost({ author: profile.name, type: 'reflection', ref: verse.ref, text: text.trim() });
+      showToast('Shared with your group ✓');
+    } catch (e) {
+      showToast('Couldn’t share — check your connection', false);
+    } finally {
+      setSharing(false);
+    }
   };
 
   const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -112,18 +124,30 @@ export default function TodayScreen({ navigation }) {
         </View>
 
         <View style={styles.actions}>
-          <Button title={saved ? 'Saved' : 'Save reflection'} icon={saved ? 'checkmark' : 'bookmark-outline'} onPress={onSave} style={{ flex: 1 }} />
+          <Button title="Save reflection" icon="bookmark-outline" onPress={onSave} style={{ flex: 1 }} />
           <Pressable
             onPress={onShare}
-            disabled={!text.trim()}
-            style={({ pressed }) => [styles.shareBtn, !text.trim() && { opacity: 0.4 }, pressed && { opacity: 0.8 }]}
+            disabled={!text.trim() || sharing}
+            style={({ pressed }) => [styles.shareBtn, (!text.trim() || sharing) && { opacity: 0.5 }, pressed && { opacity: 0.8 }]}
             accessibilityRole="button"
             accessibilityLabel="Share with group"
           >
-            <Ionicons name="people-outline" size={20} color={colors.primary} />
+            {sharing ? (
+              <Ionicons name="sync" size={20} color={colors.primary} style={{ transform: [{ rotate: '45deg' }] }} />
+            ) : (
+              <Ionicons name="people-outline" size={20} color={colors.primary} />
+            )}
           </Pressable>
         </View>
-        <Text style={styles.shareHint}>Tap the people icon to share this reflection with your group.</Text>
+
+        {toast ? (
+          <View style={[styles.toast, toast.ok ? styles.toastOk : styles.toastErr]}>
+            <Ionicons name={toast.ok ? 'checkmark-circle' : 'alert-circle'} size={18} color={toast.ok ? colors.answered : colors.danger} />
+            <Text style={[styles.toastText, { color: toast.ok ? colors.answered : colors.danger }]}>{toast.msg}</Text>
+          </View>
+        ) : (
+          <Text style={styles.shareHint}>Tap the people icon to share this reflection with your group.</Text>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -166,4 +190,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
   },
   shareHint: { fontFamily: fonts.body, fontSize: 13, color: colors.faint, marginTop: spacing.md, textAlign: 'center' },
+  toast: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: spacing.lg, paddingVertical: 12, paddingHorizontal: spacing.lg, borderRadius: radius.md, borderWidth: 1,
+  },
+  toastOk: { backgroundColor: colors.answeredSoft, borderColor: '#D6E8DC' },
+  toastErr: { backgroundColor: '#FBEAEA', borderColor: '#F1C9C9' },
+  toastText: { fontFamily: fonts.bodySemi, fontSize: 14 },
 });

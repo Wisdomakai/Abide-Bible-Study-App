@@ -32,6 +32,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import JoinGroupScreen from './src/screens/JoinGroupScreen';
 import LaunchScreen from './src/screens/LaunchScreen';
 import { registerPushToken } from './src/data/notifications';
+import { touchPresence } from './src/data/api';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -89,7 +90,7 @@ function Root() {
   }, []);
 
   React.useEffect(() => {
-    if (profile?.name) registerPushToken();
+    if (profile?.name) { registerPushToken(); touchPresence(); }
   }, [profile?.name]);
 
   // Branded launch screen on every cold start (and until data is loaded).

@@ -119,6 +119,12 @@ export function resetGroup() {
   groupIdPromise = null;
 }
 
+// Record an app open (updates profiles.last_seen via join_group). No-op locally.
+export async function touchPresence() {
+  if (!isBackendConfigured()) return;
+  try { await ensureReady(); } catch (_) {}
+}
+
 async function currentUserId() {
   const { data } = await supabase.auth.getUser();
   return data?.user?.id;
