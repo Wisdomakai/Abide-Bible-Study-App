@@ -11,13 +11,62 @@ export default function VoiceRecorder({ onRecorded, busy, label = 'Record voice'
   const [active, setActive] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const recRef = useRef(null);
+  const streamRef = useRef(null);
+  const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const secRef = useRef(0);
 
-  useEffect(() => () => { clearInterval(timerRef.current); recRef.current?.stopAndUnloadAsync?.().catch(() => {}); }, []);
+  useEffect(() => () => {
+    clearInterval(timerRef.current);
+    recRef.current?.stopAndUnloadAsync?.().catch(() => {});
+    streamRef.current?.getTracks?.().forEach((t) => t.stop());
+  }, []);
+
+  const beginTimer = () => {
+    secRef.current = 0; setSeconds(0); setActive(true);
+    timerRef.current = setInterval(() => {
+      secRef.current += 1; setSeconds(secRef.current);
+      if (secRef.current >= MAX_VOICE_SECONDS) stop();
+    }, 1000);
+  };
+
+  const webMime = () => {
+    if (typeof MediaRecorder === 'undefined') return '';
+    const options = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
+    return options.find((t) => MediaRecorder.isTypeSupported?.(t)) || '';
+  };
+
+  const startWeb = async () => {
+    const nav = typeof navigator === 'undefined' ? null : navigator;
+    if (!nav?.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      window.alert?.('Voice recording is not supported in this browser. Try Chrome/Edge on Android, or the installed Ardent app.');
+      return;
+    }
+    try {
+      const stream = await nav.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = webMime();
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      streamRef.current = stream;
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data?.size) chunksRef.current.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType || chunksRef.current[0]?.type || 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        if (secRef.current > 0) onRecorded(url, secRef.current);
+        stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        chunksRef.current = [];
+      };
+      rec.start();
+      recRef.current = rec;
+      beginTimer();
+    } catch (e) {
+      window.alert?.(e?.name === 'NotAllowedError' ? 'Please allow microphone access to record.' : `Couldn’t start recording: ${e?.message || e}`);
+    }
+  };
 
   const start = async () => {
-    if (Platform.OS === 'web') { Alert.alert('Use the app', 'Voice recording works in the installed Ardent app, not the web version.'); return; }
+    if (Platform.OS === 'web') { startWeb(); return; }
     try {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) { Alert.alert('Microphone needed', 'Please allow microphone access to record.'); return; }
@@ -25,11 +74,8 @@ export default function VoiceRecorder({ onRecorded, busy, label = 'Record voice'
       const rec = new Audio.Recording();
       await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       await rec.startAsync();
-      recRef.current = rec; secRef.current = 0; setSeconds(0); setActive(true);
-      timerRef.current = setInterval(() => {
-        secRef.current += 1; setSeconds(secRef.current);
-        if (secRef.current >= MAX_VOICE_SECONDS) stop();
-      }, 1000);
+      recRef.current = rec;
+      beginTimer();
     } catch (e) {
       Alert.alert('Couldn’t start recording', String(e?.message || e));
     }
@@ -39,6 +85,15 @@ export default function VoiceRecorder({ onRecorded, busy, label = 'Record voice'
     clearInterval(timerRef.current);
     const rec = recRef.current; recRef.current = null; setActive(false);
     if (!rec) return;
+    if (Platform.OS === 'web') {
+      try {
+        if (rec.state !== 'inactive') rec.stop();
+      } catch (e) {
+        window.alert?.(`Recording failed: ${e?.message || e}`);
+      }
+      setSeconds(0);
+      return;
+    }
     try {
       const status = await rec.getStatusAsync().catch(() => null);
       await rec.stopAndUnloadAsync();
