@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { Platform } from 'react-native';
 import { loadJSON, saveJSON, KEYS, uid, dateKey } from './storage';
-import { deletePost, getMyGroups, touchPresence, getRecentPosts } from './api';
+import { deletePost, getMyGroups, touchPresence, getRecentPosts, getCurrentUserId } from './api';
 
 const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
@@ -13,6 +14,7 @@ export function AppProvider({ children }) {
   const [prayers, setPrayers] = useState([]);             // [{ id, text, answered, createdAt, answeredAt }]
   const [streak, setStreak] = useState({ count: 0, lastDate: null });
   const [translation, setTranslationState] = useState('NIV'); // KJV | NIV | NLT
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -43,6 +45,7 @@ export function AppProvider({ children }) {
     setGroupsLoading(true);
     try {
       await touchPresence();
+      setUserId(await getCurrentUserId());
       const gs = await getMyGroups();
       setGroups(gs);
       const stored = await loadJSON(KEYS.selectedGroup, null);
@@ -69,6 +72,9 @@ export function AppProvider({ children }) {
   // ── Notifications (in-app bell) ──
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationAlert, setNotificationAlert] = useState(null);
+  const notificationPollReady = useRef(false);
+  const lastAlertAt = useRef(0);
 
   const refreshNotifications = useCallback(async () => {
     try {
@@ -76,12 +82,22 @@ export function AppProvider({ children }) {
       if (!ids.length) { setNotifications([]); setUnreadCount(0); return; }
       const posts = await getRecentPosts(ids);
       const nameOf = (id) => groups.find((g) => g.id === id)?.name || 'Group';
-      const list = posts.filter((p) => p.author !== profile?.name).map((p) => ({ ...p, group: nameOf(p.groupId) }));
+      const list = posts
+        .filter((p) => (p.authorId && userId ? p.authorId !== userId : p.author !== profile?.name))
+        .map((p) => ({ ...p, group: nameOf(p.groupId) }));
       const lastSeen = await loadJSON(KEYS.lastNotif, 0);
       setNotifications(list);
       setUnreadCount(list.filter((p) => p.createdAt > lastSeen).length);
+      const newest = list[0];
+      if (Platform.OS === 'web' && notificationPollReady.current && newest && newest.createdAt > lastSeen && newest.createdAt > lastAlertAt.current) {
+        lastAlertAt.current = newest.createdAt;
+        setNotificationAlert(newest);
+      }
+      notificationPollReady.current = true;
     } catch (_) {}
-  }, [groups, profile?.name]);
+  }, [groups, profile?.name, userId]);
+
+  const dismissNotificationAlert = useCallback(() => setNotificationAlert(null), []);
 
   const markNotificationsRead = useCallback(async () => {
     await saveJSON(KEYS.lastNotif, Date.now());
@@ -89,6 +105,11 @@ export function AppProvider({ children }) {
   }, []);
 
   useEffect(() => { if (groups.length) refreshNotifications(); }, [groups, refreshNotifications]);
+  useEffect(() => {
+    if (!groups.length) return undefined;
+    const id = setInterval(refreshNotifications, 25000);
+    return () => clearInterval(id);
+  }, [groups.length, refreshNotifications]);
 
   // ── Profile ── (accepts a name string or a partial patch object)
   const saveProfile = useCallback((patch) => {
@@ -189,7 +210,7 @@ export function AppProvider({ children }) {
   }, []);
 
   const value = {
-    ready, profile, saveProfile,
+    ready, profile, saveProfile, userId,
     reflections, saveReflection,
     notes, upsertNote, deleteNote,
     prayers, addPrayer, togglePrayerAnswered, deletePrayer, setPrayerShared,
@@ -197,7 +218,7 @@ export function AppProvider({ children }) {
     translation, setTranslation,
     groups, groupsLoading, selectedGroupId, selectGroup, refreshGroups,
     selectedGroup: groups.find((g) => g.id === selectedGroupId) || null,
-    notifications, unreadCount, refreshNotifications, markNotificationsRead,
+    notifications, unreadCount, refreshNotifications, markNotificationsRead, notificationAlert, dismissNotificationAlert,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

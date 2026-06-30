@@ -6,6 +6,7 @@ import { addPost } from '../data/api';
 import GroupChooser from '../components/GroupChooser';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
+import { confirmDestructive } from '../components/ui';
 import { uploadVoice } from '../data/voice';
 import { colors, fonts, spacing, radius } from '../theme';
 
@@ -74,10 +75,12 @@ export default function NoteEditorScreen({ route, navigation }) {
   };
 
   const confirmDelete = () => {
-    Alert.alert('Delete note?', 'This also removes it from the group feed if shared.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => { deleteNote(noteId); navigation.goBack(); } },
-    ]);
+    confirmDestructive({
+      title: 'Delete note?',
+      message: 'This also removes it from the group feed if shared.',
+      confirmText: 'Delete',
+      onConfirm: () => { deleteNote(noteId); navigation.goBack(); },
+    });
   };
 
   return (

@@ -11,7 +11,7 @@ alter table public.posts add column if not exists audio_duration int; -- seconds
 drop view if exists public.feed_with_amens;
 create view public.feed_with_amens with (security_invoker = on) as
   select
-    p.id, p.group_id, p.author_name as author, p.type, p.text, p.ref,
+    p.id, p.group_id, p.author_id, p.author_name as author, p.type, p.text, p.ref,
     p.audio_url, p.audio_duration, p.created_at,
     coalesce(array_agg(a.voter_name order by a.created_at) filter (where a.voter_name is not null), '{}') as amens
   from public.posts p

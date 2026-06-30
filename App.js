@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -40,6 +40,7 @@ SplashScreen.preventAutoHideAsync();
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
 
 const navTheme = {
   ...DefaultTheme,
@@ -85,7 +86,7 @@ function Tabs() {
 }
 
 function Root() {
-  const { ready, profile } = useApp();
+  const { ready, profile, notificationAlert, dismissNotificationAlert } = useApp();
   const [launching, setLaunching] = React.useState(true);
 
   React.useEffect(() => {
@@ -102,21 +103,45 @@ function Root() {
   if (!profile?.name) return <OnboardingScreen />;
 
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerShadowVisible: false,
-        headerTintColor: colors.primary,
-        headerTitleStyle: { fontFamily: fonts.bodySemi, color: colors.text },
-        contentStyle: { backgroundColor: colors.bg },
-      }}
-    >
-      <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
-      <Stack.Screen name="NoteEditor" component={NoteEditorScreen} options={{ title: 'Note', headerBackTitleVisible: false }} />
-      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings', headerBackTitleVisible: false }} />
-      <Stack.Screen name="JoinGroup" component={JoinGroupScreen} options={{ title: 'Group', headerBackTitleVisible: false }} />
-      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', headerBackTitleVisible: false }} />
-    </Stack.Navigator>
+    <View style={styles.appWrap}>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.bg },
+          headerShadowVisible: false,
+          headerTintColor: colors.primary,
+          headerTitleStyle: { fontFamily: fonts.bodySemi, color: colors.text },
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
+        <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
+        <Stack.Screen name="NoteEditor" component={NoteEditorScreen} options={{ title: 'Note', headerBackTitleVisible: false }} />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings', headerBackTitleVisible: false }} />
+        <Stack.Screen name="JoinGroup" component={JoinGroupScreen} options={{ title: 'Group', headerBackTitleVisible: false }} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', headerBackTitleVisible: false }} />
+      </Stack.Navigator>
+      {Platform.OS === 'web' && notificationAlert ? (
+        <Pressable
+          onPress={() => {
+            dismissNotificationAlert();
+            if (navigationRef.isReady()) navigationRef.navigate('Notifications');
+          }}
+          style={({ pressed }) => [styles.webAlert, pressed && { opacity: 0.9 }]}
+        >
+          <Ionicons name="notifications" size={18} color={colors.white} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.webAlertTitle}>New post in {notificationAlert.group}</Text>
+            <Text style={styles.webAlertText} numberOfLines={1}>{notificationAlert.author}: {notificationAlert.text || 'Voice message'}</Text>
+          </View>
+          <Pressable
+            onPress={(e) => { e.stopPropagation?.(); dismissNotificationAlert(); }}
+            hitSlop={8}
+            accessibilityLabel="Dismiss notification"
+          >
+            <Ionicons name="close" size={18} color={colors.white} />
+          </Pressable>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -140,7 +165,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AppProvider>
-        <NavigationContainer theme={navTheme} onReady={onReady}>
+        <NavigationContainer ref={navigationRef} theme={navTheme} onReady={onReady}>
           <StatusBar style="dark" />
           <Root />
         </NavigationContainer>
@@ -148,3 +173,27 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  appWrap: { flex: 1 },
+  webAlert: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: 18,
+    zIndex: 1000,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.primary,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  webAlertTitle: { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.white },
+  webAlertText: { fontFamily: fonts.body, fontSize: 12, color: 'rgba(255,255,255,0.82)', marginTop: 1 },
+});

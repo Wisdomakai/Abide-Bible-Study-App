@@ -88,7 +88,19 @@ async function currentUserId() {
   return data?.user?.id;
 }
 function mapRow(r) {
-  return { id: r.id, author: r.author, type: r.type, text: r.text, ref: r.ref, amens: r.amens || [], createdAt: new Date(r.created_at).getTime(), audioUrl: r.audio_url || null, audioDuration: r.audio_duration || 0 };
+  return {
+    id: r.id,
+    groupId: r.group_id,
+    authorId: r.author_id || null,
+    author: r.author,
+    type: r.type,
+    text: r.text,
+    ref: r.ref,
+    amens: r.amens || [],
+    createdAt: new Date(r.created_at).getTime(),
+    audioUrl: r.audio_url || null,
+    audioDuration: r.audio_duration || 0,
+  };
 }
 
 const supaApi = {
@@ -148,7 +160,7 @@ const supaApi = {
     if (audioUrl) { row.audio_url = audioUrl; row.audio_duration = audioDuration || null; } // only when present (needs voice.sql)
     const { data, error } = await supabase.from('posts').insert(row).select().single();
     if (error) throw error;
-    return { id: data.id, author, type, text, ref: ref || null, amens: [], createdAt: new Date(data.created_at).getTime(), audioUrl: audioUrl || null, audioDuration: audioDuration || 0 };
+    return { id: data.id, groupId, authorId: userId, author, type, text, ref: ref || null, amens: [], createdAt: new Date(data.created_at).getTime(), audioUrl: audioUrl || null, audioDuration: audioDuration || 0 };
   },
 
   async toggleAmen(postId, voterName) {
@@ -163,7 +175,8 @@ const supaApi = {
   async deletePost(postId) {
     if (!postId) return;
     await ensureSession();
-    await supabase.from('posts').delete().eq('id', postId);
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) throw error;
   },
 
   subscribe(groupId, listener) {
@@ -187,10 +200,10 @@ const supaApi = {
   async getRecentPosts(groupIds) {
     if (!groupIds?.length) return [];
     const { data, error } = await supabase.from('posts')
-      .select('id, group_id, author_name, type, text, created_at')
+      .select('id, group_id, author_id, author_name, type, text, created_at')
       .in('group_id', groupIds).order('created_at', { ascending: false }).limit(40);
     if (error) return [];
-    return (data || []).map((p) => ({ id: p.id, groupId: p.group_id, author: p.author_name, type: p.type, text: p.text, createdAt: new Date(p.created_at).getTime() }));
+    return (data || []).map((p) => ({ id: p.id, groupId: p.group_id, authorId: p.author_id, author: p.author_name, type: p.type, text: p.text, createdAt: new Date(p.created_at).getTime() }));
   },
 };
 
@@ -209,4 +222,5 @@ export const subscribe = (...a) => api.subscribe(...a);
 export const touchPresence = (...a) => api.touchPresence(...a);
 export const leaveGroup = (...a) => api.leaveGroup(...a);
 export const getRecentPosts = (...a) => api.getRecentPosts(...a);
+export const getCurrentUserId = isBackendConfigured() ? currentUserId : async () => null;
 export const backendMode = isBackendConfigured() ? 'supabase' : 'local';

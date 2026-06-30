@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Linking, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius, shadow } from '../theme';
 
@@ -92,6 +92,18 @@ export function LinkText({ children, style }) {
       )}
     </Text>
   );
+}
+
+export function confirmDestructive({ title, message, confirmText = 'Delete', onConfirm }) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const ok = window.confirm(`${title}${message ? `\n\n${message}` : ''}`);
+    if (ok) onConfirm?.();
+    return;
+  }
+  Alert.alert(title, message || '', [
+    { text: 'Cancel', style: 'cancel' },
+    { text: confirmText, style: 'destructive', onPress: onConfirm },
+  ]);
 }
 
 export function timeAgo(ts) {

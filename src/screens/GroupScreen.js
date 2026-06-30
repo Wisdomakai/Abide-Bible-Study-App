@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../data/AppContext';
 import { getFeed, addPost, toggleAmen, deletePost, subscribe } from '../data/api';
-import { Pill, EmptyState, timeAgo, LinkText } from '../components/ui';
+import { Pill, EmptyState, timeAgo, LinkText, confirmDestructive } from '../components/ui';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
 import { uploadVoice } from '../data/voice';
@@ -19,7 +19,7 @@ const TYPE_META = {
 const initials = (name) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
 export default function GroupScreen({ navigation }) {
-  const { profile, groups, selectedGroupId, selectGroup, selectedGroup, refreshGroups } = useApp();
+  const { profile, userId, groups, selectedGroupId, selectGroup, selectedGroup, refreshGroups } = useApp();
   const [feed, setFeed] = useState([]);
   const [composing, setComposing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -60,14 +60,17 @@ export default function GroupScreen({ navigation }) {
 
   const onAmen = async (postId) => { await toggleAmen(postId, profile.name); };
   const onDelete = (postId) => {
-    Alert.alert('Delete message?', 'This removes it from the group for everyone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
+    confirmDestructive({
+      title: 'Delete message?',
+      message: 'This removes it from the group for everyone.',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        const before = feed;
         setFeed((f) => f.filter((p) => p.id !== postId));
-        try { await deletePost(postId); } catch (e) { Alert.alert('Couldn’t delete', 'Please try again.'); }
+        try { await deletePost(postId); } catch (e) { setFeed(before); Alert.alert('Couldn’t delete', 'Please try again.'); }
         refresh();
-      } },
-    ]);
+      },
+    });
   };
 
   // No groups yet → invite to create/join.
@@ -124,7 +127,7 @@ export default function GroupScreen({ navigation }) {
         ListEmptyComponent={<EmptyState icon="chatbubbles-outline" title="Quiet for now" subtitle={`Share a reflection, note, or prayer to ${selectedGroup?.name || 'this group'}.`} />}
         renderItem={({ item }) => {
           const meta = TYPE_META[item.type] || TYPE_META.note;
-          const mine = item.author === profile.name;
+          const mine = item.authorId && userId ? item.authorId === userId : item.author === profile.name;
           const amened = item.amens.includes(profile.name);
           return (
             <View style={styles.post}>
@@ -225,4 +228,3 @@ const styles = StyleSheet.create({
   voiceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
   voiceLabel: { flex: 1, fontFamily: fonts.body, fontSize: 13, color: colors.muted },
 });
-
