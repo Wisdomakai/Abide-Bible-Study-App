@@ -11,7 +11,8 @@
     "android:twa:generate": "node scripts/generate-android.mjs",
     "android:twa:build": "node scripts/build-android.mjs",
     "android:sync": "npm run build && cap sync android",
-    "android:build": "node scripts/build-capacitor-android.mjs"
+    "android:build": "node scripts/build-capacitor-android.mjs",
+    "splash": "node scripts/generate-splash.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^6.0.3",
@@ -35,6 +36,7 @@
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.2.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "sharp": "^0.32.6",
     "typescript": "^7.0.2",
     "vite": "^6.0.7",
     "vite-plugin-pwa": "^0.21.1"

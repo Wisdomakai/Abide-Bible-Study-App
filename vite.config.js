@@ -34,7 +34,9 @@ export default defineConfig({
       },
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,png,ico,webmanifest}'],
-        globIgnores: ['admin/**'],
+        // iOS reads launch images directly at install time; precaching 1.7 MB
+        // of artwork the app never requests would only slow first load.
+        globIgnores: ['admin/**', 'splash/**'],
       },
     }),
   ],
