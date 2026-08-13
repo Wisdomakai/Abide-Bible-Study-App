@@ -22,10 +22,8 @@ export const GROUP_NAME = 'Our Bible Study';
 // BIBLE TEXT API (optional)
 //
 // • KJV works with NO key (fetched from the free bible-api.com).
-// • NIV / NLT are copyrighted and need a licensed source. The app supports
-//   API.Bible (https://scripture.api.bible): create a free key, then request
-//   access to the NIV / NLT Bibles and paste their Bible IDs below. Until then,
-//   NIV/NLT fall back to the bundled verses (with attribution) automatically.
+// Copyrighted translations must not be enabled without an approved provider
+// license and its required attribution. The shipping PWA exposes only KJV.
 //
 // Leave BIBLE_API_KEY empty to use the no-key KJV path only.
 // ─────────────────────────────────────────────────────────────────────────────

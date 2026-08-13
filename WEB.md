@@ -1,31 +1,17 @@
-# Ardent on the web (PWA — works on iPhone)
+# Deploying the Ardent PWA
 
-The app is also deployed as an installable **Progressive Web App**, so iPhone (and any
-browser) users can use it without the App Store.
+Primary URL: https://ardent-study.vercel.app
 
-**Live URL:** https://bible-study-journal.expo.app
+The legacy `https://bible-study-journal.expo.app` origin temporarily receives the same static PWA build so already-installed users obtain the service-worker update. New installations should use the primary Vercel URL.
 
-## Install on iPhone (no App Store / no Apple account)
-1. Open **https://bible-study-journal.expo.app** in **Safari**.
-2. Tap the **Share** button → **Add to Home Screen** → **Add**.
-3. "Ardent" appears as an app icon and opens full-screen (standalone), like a native app.
+1. Configure Supabase using [BACKEND.md](BACKEND.md).
+2. Build with `npm run build`.
+3. Deploy the contents of `dist/` to an HTTPS host.
+4. Configure every unknown route to return `index.html`.
+5. Set the production URL in Supabase Authentication → URL Configuration as the Site URL and add the same origin to Redirect URLs.
 
-(On Android/Chrome it's the same idea: menu → "Install app".)
+The generated service worker precaches only the current hashed application build and cleans obsolete caches. Supabase API calls and voice recordings are not runtime-cached.
 
-## Re-deploy after code changes
-```bash
-cd bible-journal
-npx expo export --platform web --output-dir dist   # build web
-node scripts/pwa-postbuild.mjs                      # add manifest, icons, SW, meta
-npx eas-cli deploy --prod                           # publish to the production URL
-```
-The production URL stays the same, so installed PWAs get the new version on next open
-(the service worker refreshes assets in the background).
+Configure hosting so `/sw.js`, `/manifest.webmanifest`, and `/index.html` are revalidated (`Cache-Control: no-cache`), while hashed files under `/assets/` may be immutable. Recommended response headers are `X-Content-Type-Options: nosniff`, a restrictive `Referrer-Policy`, a `Permissions-Policy` allowing microphone access only to this origin, and a Content Security Policy that permits only the deployed Supabase and scripture endpoints actually in use.
 
-## Notes / limitations on web
-- Works: onboarding, daily verse + KJV/NIV/NLT toggle, journal, prayers, the shared group
-  feed (Supabase), invite codes.
-- Limited on iOS PWAs: push notifications and the native time picker behave differently
-  than on the installed app — the core journaling + group features are the focus on web.
-- The PWA and the native builds share the same Supabase backend, so a web user and a
-  phone user in the same group code see the same feed.
+Users install from the browser menu or, on iPhone Safari, Share → Add to Home Screen. Web Push requires an installed PWA on supported iOS versions and must always be enabled from the Settings button.

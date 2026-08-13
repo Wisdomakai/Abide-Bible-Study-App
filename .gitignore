@@ -10,6 +10,12 @@ expo-env.d.ts
 # Native
 ios/
 android/
+android-twa/
+.android-tools/
+*.jks
+*.keystore
+*.apk
+*.aab
 
 # Metro
 .metro-health-check*
@@ -39,3 +45,4 @@ gen-icons.mjs
 
 # Supabase CLI cache
 supabase/.temp/
+.vercel

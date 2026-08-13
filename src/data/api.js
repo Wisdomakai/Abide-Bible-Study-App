@@ -19,6 +19,8 @@
 import { loadJSON, saveJSON, uid, KEYS } from './storage';
 import { isBackendConfigured, GROUP_CODE, GROUP_NAME } from './config';
 import { supabase } from './supabase';
+import { signedVoiceUrl } from './voice';
+import { generateCode } from './groupCode';
 
 // ===========================================================================
 // LOCAL backend (no server) — single on-device group, ignores groupId.
@@ -41,14 +43,15 @@ const localApi = {
   async ensureSession() {},
   async touchPresence() {},
   async joinGroupByCode() { return 'local'; },
+  async createGroup() { return { id: 'local', code: 'local' }; },
   async getMyGroups() {
     const p = await loadJSON(KEYS.profile, {});
     return [{ id: 'local', name: p?.groupName || 'My Group', code: p?.groupCode || 'local', adminName: p?.name || 'You', members: 1, lastPost: null }];
   },
   async getFeed() { return [...(await localRead())].sort((a, b) => b.createdAt - a.createdAt); },
-  async addPost(_g, { author, type, text, ref, audioUrl, audioDuration }) {
+  async addPost(_g, { author, type, text, ref, audioUrl, audioDuration, mentionedUserIds = [] }) {
     const f = await localRead();
-    const post = { id: uid(), author, type, text, ref: ref || null, amens: [], createdAt: Date.now(), audioUrl: audioUrl || null, audioDuration: audioDuration || 0 };
+    const post = { id: uid(), author, type, text, ref: ref || null, amens: [], mentionedUserIds, createdAt: Date.now(), audioUrl: audioUrl || null, audioDuration: audioDuration || 0 };
     const next = [post, ...f]; await saveJSON(FEED_KEY, next); localListeners.forEach((fn) => fn(next));
     return post;
   },
@@ -62,6 +65,10 @@ const localApi = {
     const f = await localRead(); const next = f.filter((p) => p.id !== postId);
     await saveJSON(FEED_KEY, next); localListeners.forEach((fn) => fn(next));
   },
+  async getGroupMembers() {
+    const p = await loadJSON(KEYS.profile, {});
+    return [{ userId: 'local', name: p?.name || 'You', joinedAt: Date.now(), isAdmin: true }];
+  },
   subscribe(_g, listener) { localListeners.add(listener); return () => localListeners.delete(listener); },
   async leaveGroup() {},
   async getRecentPosts() { return []; },
@@ -74,10 +81,7 @@ let sessionPromise = null;
 
 async function ensureSessionInner() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    const { error } = await supabase.auth.signInAnonymously();
-    if (error) throw error;
-  }
+  if (!user || user.is_anonymous) throw new Error('Sign in to continue');
 }
 function ensureSession() {
   if (!sessionPromise) sessionPromise = ensureSessionInner().catch((e) => { sessionPromise = null; throw e; });
@@ -98,9 +102,17 @@ function mapRow(r) {
     ref: r.ref,
     amens: r.amens || [],
     createdAt: new Date(r.created_at).getTime(),
+    audioPath: r.audio_url || null,
     audioUrl: r.audio_url || null,
     audioDuration: r.audio_duration || 0,
+    mentionedUserIds: r.mentioned_user_ids || [],
   };
+}
+
+async function signAudio(posts) {
+  return Promise.all(posts.map(async (post) => post.audioPath
+    ? { ...post, audioUrl: await signedVoiceUrl(post.audioPath) }
+    : post));
 }
 
 const supaApi = {
@@ -108,21 +120,29 @@ const supaApi = {
 
   async joinGroupByCode(code, name, groupName, adminName) {
     await ensureSession();
-    // Prefer the multi-group signature (with admin name); fall back to the older
-    // 3-arg one if multigroup.sql hasn't been run yet.
-    let res = await supabase.rpc('join_group', {
-      p_code: code, p_name: name, p_group_name: groupName || GROUP_NAME, p_admin_name: adminName || name,
-    });
-    if (res.error) {
-      res = await supabase.rpc('join_group', { p_code: code, p_name: name, p_group_name: groupName || GROUP_NAME });
-    }
+    const res = await supabase.rpc('join_group', { p_code: code, p_name: name });
     if (res.error) throw res.error;
     return res.data;
+  },
+
+  async createGroup(code, name, groupName) {
+    await ensureSession();
+    let candidate = code;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const { data, error } = await supabase.rpc('create_group', {
+        p_code: candidate, p_name: name, p_group_name: groupName || GROUP_NAME,
+      });
+      if (!error) return { id: data, code: candidate };
+      if (!String(error.message || '').toLowerCase().includes('collision')) throw error;
+      candidate = generateCode();
+    }
+    throw new Error('Could not reserve a unique invite code. Please try again.');
   },
 
   async touchPresence() {
     await ensureSession();
     const profile = await loadJSON(KEYS.profile, null);
+    if (profile?.name) await supabase.rpc('touch_presence', { p_name: profile.name });
     if (profile?.groupCode) {
       // Ensures membership in the user's default group + stamps last_seen/login.
       try { await supaApi.joinGroupByCode(profile.groupCode, profile.name, profile.groupName, profile.name); } catch (_) {}
@@ -151,16 +171,28 @@ const supaApi = {
     if (!groupId) return [];
     const { data, error } = await supabase.from('feed_with_amens').select('*').eq('group_id', groupId).order('created_at', { ascending: false });
     if (error) throw error;
-    return (data || []).map(mapRow);
+    return signAudio((data || []).map(mapRow));
   },
 
-  async addPost(groupId, { author, type, text, ref, audioUrl, audioDuration }) {
+  async getGroupMembers(groupId) {
+    if (!groupId) return [];
+    await ensureSession();
+    const { data, error } = await supabase.rpc('group_members', { p_group_id: groupId });
+    if (error) throw error;
+    return (data || []).map((member) => ({
+      userId: member.user_id, name: member.name, isAdmin: !!member.is_admin,
+      joinedAt: new Date(member.joined_at).getTime(),
+    }));
+  },
+
+  async addPost(groupId, { author, type, text, ref, audioUrl, audioDuration, mentionedUserIds = [] }) {
     const userId = await currentUserId();
-    const row = { group_id: groupId, author_id: userId, author_name: author, type, text, ref: ref || null };
+    if (audioDuration && audioDuration > 900) throw new Error('Voice recordings are limited to 15 minutes.');
+    const row = { group_id: groupId, author_id: userId, author_name: author, type, text, ref: ref || null, mentioned_user_ids: [...new Set(mentionedUserIds)].slice(0, 20) };
     if (audioUrl) { row.audio_url = audioUrl; row.audio_duration = audioDuration || null; } // only when present (needs voice.sql)
     const { data, error } = await supabase.from('posts').insert(row).select().single();
     if (error) throw error;
-    return { id: data.id, groupId, authorId: userId, author, type, text, ref: ref || null, amens: [], createdAt: new Date(data.created_at).getTime(), audioUrl: audioUrl || null, audioDuration: audioDuration || 0 };
+    return { id: data.id, groupId, authorId: userId, author, type, text, ref: ref || null, amens: [], mentionedUserIds: row.mentioned_user_ids, createdAt: new Date(data.created_at).getTime(), audioPath: audioUrl || null, audioUrl: await signedVoiceUrl(audioUrl), audioDuration: audioDuration || 0 };
   },
 
   async toggleAmen(postId, voterName) {
@@ -169,14 +201,21 @@ const supaApi = {
     if (existing) await supabase.from('amens').delete().eq('post_id', postId).eq('user_id', userId);
     else await supabase.from('amens').insert({ post_id: postId, user_id: userId, voter_name: voterName });
     const { data } = await supabase.from('feed_with_amens').select('*').eq('id', postId).single();
-    return data ? mapRow(data) : null;
+    return data ? (await signAudio([mapRow(data)]))[0] : null;
   },
 
   async deletePost(postId) {
     if (!postId) return;
     await ensureSession();
+    const { data: post } = await supabase.from('posts').select('type, audio_url').eq('id', postId).maybeSingle();
     const { error } = await supabase.from('posts').delete().eq('id', postId);
     if (error) throw error;
+    if (post?.type === 'voice' && post.audio_url) {
+      const { error: storageError } = await supabase.storage.from('voice').remove([post.audio_url]);
+      // The message is already permanently deleted. A storage cleanup failure
+      // must not make the UI restore a post that no longer exists.
+      if (storageError) console.warn('Voice cleanup will need retrying', storageError.message);
+    }
   },
 
   subscribe(groupId, listener) {
@@ -213,8 +252,10 @@ const supaApi = {
 const api = isBackendConfigured() ? supaApi : localApi;
 
 export const joinGroupByCode = (...a) => api.joinGroupByCode(...a);
+export const createGroup = (...a) => api.createGroup(...a);
 export const getMyGroups = (...a) => api.getMyGroups(...a);
 export const getFeed = (...a) => api.getFeed(...a);
+export const getGroupMembers = (...a) => api.getGroupMembers(...a);
 export const addPost = (...a) => api.addPost(...a);
 export const toggleAmen = (...a) => api.toggleAmen(...a);
 export const deletePost = (...a) => api.deletePost(...a);

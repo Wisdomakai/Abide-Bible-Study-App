@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4B3F9E" />
+    <title>Updating Ardent…</title>
+  </head>
+  <body style="margin:0;background:#f7f5ff;color:#242033;font:16px system-ui;display:grid;min-height:100vh;place-items:center">
+    <main style="padding:32px;text-align:center">
+      <img src="/icon-192.png" alt="Ardent" width="76" height="76" style="border-radius:24px" />
+      <h1 style="font-size:24px">Updating Ardent…</h1>
+      <p>Please keep this page open for a moment.</p>
+    </main>
+    <script>
+      (async () => {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+        if ('caches' in window) {
+          const names = await caches.keys();
+          await Promise.all(names.map((name) => caches.delete(name)));
+        }
+        window.location.replace('/?pwa-recovered=1');
+      })().catch(() => window.location.replace('/?pwa-recovered=1'));
+    </script>
+  </body>
+</html>

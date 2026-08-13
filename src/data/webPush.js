@@ -1,13 +1,13 @@
-import { Platform } from 'react-native';
 import { supabase } from './supabase';
 import { VAPID_PUBLIC, isBackendConfigured } from './config';
 import { touchPresence } from './api';
 import { loadJSON, KEYS } from './storage';
+import { isNativeApp, nativeNotificationStatus, requestNativeNotificationPermission } from './native';
 
 // Web Push only runs in the browser / installed PWA.
 export function webPushSupported() {
+  if (isNativeApp) return true;
   return (
-    Platform.OS === 'web' &&
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
     'PushManager' in window &&
@@ -16,6 +16,7 @@ export function webPushSupported() {
 }
 
 export function webPushStatus() {
+  if (isNativeApp) return nativeNotificationStatus();
   return webPushSupported() ? Notification.permission : 'unsupported'; // default | granted | denied
 }
 
@@ -31,6 +32,7 @@ function urlB64ToUint8Array(base64) {
 // Requests permission (must be called from a tap on iOS), subscribes via the
 // service worker, and stores the subscription so the server can push to it.
 export async function subscribeWebPush() {
+  if (isNativeApp) return requestNativeNotificationPermission();
   if (!webPushSupported() || !isBackendConfigured() || !supabase) return { ok: false, reason: 'unsupported' };
   try {
     const permission = await Notification.requestPermission();
@@ -46,18 +48,17 @@ export async function subscribeWebPush() {
     }
     const json = sub.toJSON();
 
-    await touchPresence(); // ensure an anonymous session + group membership exist
+    await touchPresence(); // refresh the authenticated member's presence
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { ok: false, reason: 'no-session' };
-    const profile = await loadJSON(KEYS.profile, {});
+    const reminder = await loadJSON(KEYS.reminder, { enabled: false, hour: 7, minute: 30 });
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-    const { error } = await supabase.from('web_subscriptions').upsert({
-      user_id: user.id,
-      group_code: profile?.groupCode || null,
-      endpoint: json.endpoint,
-      p256dh: json.keys.p256dh,
-      auth: json.keys.auth,
-    }, { onConflict: 'endpoint' });
+    const { error } = await supabase.rpc('claim_web_subscription', {
+      p_endpoint: json.endpoint, p_p256dh: json.keys.p256dh, p_auth: json.keys.auth,
+      p_timezone: timezone, p_reminder_enabled: !!reminder.enabled,
+      p_reminder_hour: reminder.hour, p_reminder_minute: reminder.minute,
+    });
     if (error) return { ok: false, reason: error.message };
     return { ok: true };
   } catch (e) {

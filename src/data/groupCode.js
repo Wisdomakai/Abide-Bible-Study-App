@@ -1,15 +1,24 @@
-// Friendly, shareable group codes like "grace-274" — easy to read out loud.
+// Short, memorable Bible-themed invite codes: one word plus two digits.
 const WORDS = [
-  'grace', 'faith', 'hope', 'light', 'cedar', 'olive', 'psalm', 'manna',
-  'dove', 'vine', 'shalom', 'gilead', 'zion', 'haven', 'ember', 'reed',
+  'ABIDE', 'ANOINT', 'ARK', 'BELIEVE', 'BLESS', 'BREAD', 'CROWN', 'DAWN',
+  'EDEN', 'FAITH', 'FLOURISH', 'GIFT', 'GLORY', 'GRACE', 'HARVEST', 'HEART',
+  'HEAVEN', 'HOPE', 'JOY', 'KINGDOM', 'LAMB', 'LIGHT', 'LILY', 'LOVE',
+  'MANNA', 'MERCY', 'OLIVE', 'PEACE', 'PRAISE', 'PRAYER', 'PROMISE', 'PSALM',
+  'REJOICE', 'REST', 'RIVER', 'ROCK', 'SHEPHERD', 'SHIELD', 'SPIRIT', 'SPRING',
+  'STAR', 'TEMPLE', 'THANKS', 'TRUTH', 'VINE', 'WISDOM', 'WORSHIP', 'ZION',
 ];
 
+function randomIndex(size) {
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return values[0] % size;
+}
+
 export function generateCode() {
-  const word = WORDS[Math.floor(Math.random() * WORDS.length)];
-  const num = Math.floor(100 + Math.random() * 900);
-  return `${word}-${num}`;
+  const number = String(10 + randomIndex(90));
+  return `${WORDS[randomIndex(WORDS.length)]}${number}`;
 }
 
 export function normalizeCode(code) {
-  return (code || '').trim().toLowerCase().replace(/\s+/g, '-');
+  return (code || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }

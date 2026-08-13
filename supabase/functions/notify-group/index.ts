@@ -1,11 +1,10 @@
 // Edge Function: notify-group
 // Fires after a post is inserted (via the posts trigger). Notifies the OTHER
 // members of that post's group two ways:
-//   • Native (Android/iOS builds) — Expo Push  →  FCM / APNs
-//   • Web (PWA)                   — Web Push   →  the browser's push service
+//   • Installed PWA / browser — Web Push through the device push service
 //
 // Deploy:  npx supabase functions deploy notify-group --no-verify-jwt
-// Secrets needed (web push): VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT
+// Secrets needed: NOTIFY_SECRET, VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 
@@ -18,6 +17,11 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 
 Deno.serve(async (req) => {
   try {
+    const expectedSecret = Deno.env.get('NOTIFY_SECRET');
+    if (!expectedSecret || req.headers.get('x-webhook-secret') !== expectedSecret) {
+      return new Response('unauthorized', { status: 401 });
+    }
+
     const { post_id } = await req.json();
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -34,33 +38,21 @@ Deno.serve(async (req) => {
     if (otherIds.length === 0) return new Response('no recipients', { status: 200 });
 
     const label = post.type === 'prayer' ? 'shared a prayer request'
-      : post.type === 'reflection' ? 'shared a reflection' : 'posted a note';
+      : post.type === 'reflection' ? 'shared a reflection'
+        : post.type === 'voice' ? 'sent a voice message' : 'posted a note';
     const title = `${post.author_name} ${label}`;
     const body = (post.text ?? '').slice(0, 120);
 
-    // ── Native push (Expo → FCM/APNs) ──
-    const { data: profiles } = await supabase
-      .from('profiles').select('push_token').in('id', otherIds);
-    const tokens = (profiles ?? []).map((p) => p.push_token).filter(Boolean);
-    const nativePromise = tokens.length
-      ? fetch('https://exp.host/--/api/v2/push/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(tokens.map((to) => ({ to, sound: 'default', title, body, data: { type: 'group_post' } }))),
-        }).catch(() => {})
-      : Promise.resolve();
-
-    // ── Web push (PWA) ──
     let webPromise = Promise.resolve();
     if (VAPID_PUBLIC && VAPID_PRIVATE) {
       const { data: subs } = await supabase
         .from('web_subscriptions').select('endpoint, p256dh, auth').in('user_id', otherIds);
-      const payload = JSON.stringify({ title, body, url: '/' });
+      const payload = JSON.stringify({ title, body: body || 'Voice message', url: '/', groupId: post.group_id, tag: `post-${post_id}` });
       webPromise = Promise.all((subs ?? []).map((s) =>
         webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           payload,
-        ).catch(async (err) => {
+        ).catch(async (err: any) => {
           // Clean up expired/invalid subscriptions (410 Gone / 404).
           if (err?.statusCode === 410 || err?.statusCode === 404) {
             await supabase.from('web_subscriptions').delete().eq('endpoint', s.endpoint);
@@ -69,9 +61,9 @@ Deno.serve(async (req) => {
       ));
     }
 
-    await Promise.all([nativePromise, webPromise]);
+    await webPromise;
     return new Response('sent', { status: 200 });
   } catch (e) {
-    return new Response(`error: ${e}`, { status: 200 });
+    return new Response(`error: ${e}`, { status: 500 });
   }
 });

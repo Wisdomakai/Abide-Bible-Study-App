@@ -19,16 +19,26 @@ export const colors = {
   white: '#FFFFFF',
 };
 
+// Verse highlighter pens. `bg` tints the verse in the reader, `bar` marks the
+// entry in the Journal — both muted enough to keep scripture readable.
+export const highlightPens = [
+  { key: 'gold', label: 'Gold', bg: '#FAE8C0', bar: '#D3A03A' },
+  { key: 'rose', label: 'Rose', bg: '#F9DCE1', bar: '#CD647B' },
+  { key: 'sky', label: 'Sky', bg: '#D9E7F8', bar: '#4F87C4' },
+  { key: 'leaf', label: 'Leaf', bg: '#DCEDE0', bar: '#569A6C' },
+  { key: 'violet', label: 'Violet', bg: '#E4DEF7', bar: '#7A6BC4' },
+];
+
+export const penFor = (key) => highlightPens.find((p) => p.key === key) || highlightPens[0];
+
 export const fonts = {
-  // Serif for scripture & titles (loaded in App.js)
-  serif: 'Lora_500Medium',
-  serifBold: 'Lora_600SemiBold',
-  serifItalic: 'Lora_400Regular_Italic',
-  // Sans for UI & body
-  body: 'Inter_400Regular',
-  bodyMedium: 'Inter_500Medium',
-  bodySemi: 'Inter_600SemiBold',
-  bodyBold: 'Inter_700Bold',
+  serif: 'Georgia, Cambria, serif',
+  serifBold: 'Georgia, Cambria, serif',
+  serifItalic: 'Georgia, Cambria, serif',
+  body: 'Inter, ui-sans-serif, system-ui, sans-serif',
+  bodyMedium: 'Inter, ui-sans-serif, system-ui, sans-serif',
+  bodySemi: 'Inter, ui-sans-serif, system-ui, sans-serif',
+  bodyBold: 'Inter, ui-sans-serif, system-ui, sans-serif',
 };
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };

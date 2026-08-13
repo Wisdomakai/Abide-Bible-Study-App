@@ -1,47 +1,45 @@
-import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from './supabase';
 import { uid } from './storage';
-import { isBackendConfigured } from './config';
 
-function b64ToUint8(b64) {
-  const bin = atob(b64);
-  const arr = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  return arr;
-}
+const EXTENSIONS = { 'audio/mp4': 'mp4', 'audio/mpeg': 'mp3', 'audio/aac': 'aac', 'audio/webm': 'webm' };
 
-const TYPES = { m4a: 'audio/m4a', mp4: 'audio/mp4', caf: 'audio/x-caf', '3gp': 'audio/3gpp', aac: 'audio/aac', webm: 'audio/webm', mp3: 'audio/mpeg' };
-
-async function uploadBytes(bytes, ext, contentType) {
-  if (!isBackendConfigured() || !supabase) throw new Error('Backend not configured');
+export async function uploadVoice(blob) {
+  if (!supabase || !(blob instanceof Blob)) throw new Error('A browser recording is required');
+  if (!blob.size) throw new Error('The recording is empty. Please record it again.');
+  if (blob.size > MAX_VOICE_BYTES) throw new Error('This recording is over 20 MB. Please send a shorter recording.');
   const { data: { user } } = await supabase.auth.getUser();
-  const path = `${user?.id || 'anon'}/${uid()}.${ext}`;
-  const { error } = await supabase.storage.from('voice').upload(path, bytes, {
-    contentType: contentType || TYPES[ext] || 'audio/mpeg', upsert: false,
-  });
+  if (!user) throw new Error('Sign in before uploading a recording');
+  const ext = EXTENSIONS[blob.type] || 'webm';
+  const path = `${user.id}/${uid()}.${ext}`;
+  const { error } = await supabase.storage.from('voice').upload(path, blob, { contentType: blob.type || 'audio/webm', upsert: false });
   if (error) throw error;
-  return supabase.storage.from('voice').getPublicUrl(path).data.publicUrl;
+  return path;
 }
 
-// Uploads a recorded file to the public 'voice' bucket and returns its URL.
-export async function uploadVoice(localUri) {
-  if (localUri?.startsWith?.('blob:')) {
-    const blob = await fetch(localUri).then((r) => r.blob());
-    return uploadVoiceBlob(blob);
-  }
-  const ext = (localUri.split('.').pop() || 'm4a').split('?')[0].toLowerCase();
-  const b64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
-  const bytes = b64ToUint8(b64);
-  return uploadBytes(bytes, ext, TYPES[ext]);
+export async function signedVoiceUrl(path) {
+  if (!path) return null;
+  if (/^https?:/.test(path)) return path; // legacy public recording
+  const { data, error } = await supabase.storage.from('voice').createSignedUrl(path, 3600);
+  if (error) return null;
+  return data.signedUrl;
 }
 
-export async function uploadVoiceBlob(blob) {
-  const type = blob?.type || 'audio/webm';
-  const ext = type.includes('mp4') ? 'mp4'
-    : type.includes('mpeg') ? 'mp3'
-      : type.includes('aac') ? 'aac'
-        : 'webm';
-  return uploadBytes(blob, ext, type);
+export async function deleteVoice(path) {
+  if (!path || /^https?:/.test(path)) return;
+  const { error } = await supabase.storage.from('voice').remove([path]);
+  if (error) throw error;
+}
+
+// A local note and one or more group posts can reference the same recording.
+// Only remove the object when no live group post still needs it.
+export async function deleteVoiceIfUnreferenced(path) {
+  if (!path || /^https?:/.test(path)) return true;
+  const { count, error } = await supabase.from('posts')
+    .select('id', { count: 'exact', head: true }).eq('audio_url', path);
+  if (error) throw error;
+  if (count) return false;
+  await deleteVoice(path);
+  return true;
 }
 
 export function fmtDuration(sec) {
@@ -49,4 +47,5 @@ export function fmtDuration(sec) {
   return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 }
 
-export const MAX_VOICE_SECONDS = 900; // 15 minutes
+export const MAX_VOICE_SECONDS = 900;
+export const MAX_VOICE_BYTES = 20 * 1024 * 1024;

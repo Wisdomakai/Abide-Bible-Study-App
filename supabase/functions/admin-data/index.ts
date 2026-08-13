@@ -43,9 +43,12 @@ Deno.serve(async (req) => {
     ]);
 
   const groupsById = new Map((groups ?? []).map((g) => [g.id, g]));
-  const memberGroup = new Map<string, any>(); // user_id -> first group
+  const memberGroups = new Map<string, any[]>();
   for (const m of memberships ?? []) {
-    if (!memberGroup.has(m.user_id)) memberGroup.set(m.user_id, groupsById.get(m.group_id));
+    const list = memberGroups.get(m.user_id) ?? [];
+    const group = groupsById.get(m.group_id);
+    if (group) list.push(group);
+    memberGroups.set(m.user_id, list);
   }
 
   const postsByUser = new Map<string, { count: number; last: string | null }>();
@@ -60,10 +63,10 @@ Deno.serve(async (req) => {
   for (const m of memberships ?? []) membersByGroup.set(m.group_id, (membersByGroup.get(m.group_id) ?? 0) + 1);
 
   const users = (profiles ?? []).map((u) => {
-    const g = memberGroup.get(u.id);
+    const userGroups = memberGroups.get(u.id) ?? [];
     const pu = postsByUser.get(u.id) ?? { count: 0, last: null };
     return {
-      name: u.name, group: g?.name ?? '—', groupCode: g?.code ?? '',
+      name: u.name, group: userGroups.map((g) => g.name).join(', ') || '—', groupCode: userGroups.map((g) => g.code).join(', '),
       joined: u.created_at, lastSeen: u.last_seen ?? u.created_at,
       posts: pu.count, lastPost: pu.last, push: !!u.push_token,
     };

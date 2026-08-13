@@ -1,0 +1,14 @@
+{
+  "appId": "com.ardentbiblestudy.app",
+  "appName": "Ardent Bible Study",
+  "webDir": "dist",
+  "server": {
+    "hostname": "ardent-study.vercel.app",
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#4B3F9E"
+    }
+  }
+}

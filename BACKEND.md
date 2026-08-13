@@ -1,59 +1,58 @@
-# Backend setup — shared Group feed (Supabase)
+# Supabase setup for the Ardent PWA
 
-The app already works in **local mode** (on-device feed). Follow these steps once to
-turn on the **real shared feed** so your study mates see each other's posts across
-phones. ~10 minutes, free tier.
+## 1. Database
 
-## 1. Create a Supabase project
-1. Go to https://supabase.com → sign in → **New project**.
-2. Give it a name, set a database password, pick a region near you, **Create**.
-3. Wait ~2 minutes for it to provision.
+For an existing Ardent project, apply these files in order in the SQL editor:
 
-## 2. Create the database
-1. In your project, open **SQL Editor** (left sidebar) → **New query**.
-2. Open [`supabase/schema.sql`](supabase/schema.sql) from this repo, copy everything,
-   paste it in, and click **Run**. You should see "Success".
-   - This creates the tables, security rules, the `join_group` function, the feed
-     view, and turns on Realtime.
+1. `supabase/schema.sql`
+2. `supabase/admin.sql`
+3. `supabase/multigroup.sql`
+4. `supabase/webpush.sql`
+5. `supabase/pwa.sql`
+6. `supabase/notifications.sql`
 
-## 3. Turn on anonymous sign-in
-The app signs each phone in **anonymously** (no passwords — keeps it simple).
-1. Go to **Authentication → Providers** (or **Sign In / Providers**).
-2. Enable **Anonymous sign-ins** → Save.
+`pwa.sql` is the current consolidation migration: cloud journal sync, separate create/join operations, strong invite codes, the voice post type, private voice storage, PWA reminder preferences, and rate-limited presence logging.
 
-## 4. Add your keys to the app
-1. Go to **Project Settings → API**.
-2. Copy the **Project URL** and the **anon / public** key.
-3. Open [`src/data/config.js`](src/data/config.js) and fill in:
-   ```js
-   export const SUPABASE_URL = 'https://YOURPROJECT.supabase.co';
-   export const SUPABASE_ANON_KEY = 'eyJhbGci...';   // the anon/public key
-   export const GROUP_CODE = 'grace-group';          // your group's secret word
-   export const GROUP_NAME = 'Our Bible Study';
-   ```
-4. Restart Expo: stop the server and run `npx expo start -c` (the `-c` clears the cache).
+## 2. Authentication
 
-## 5. Share with your mates
-Everyone runs the **same app build** (same `config.js`). On first launch each phone:
-- signs in anonymously,
-- joins the group identified by `GROUP_CODE`,
-- and starts seeing the shared feed update **live**.
+In Authentication → Providers, enable Email and magic-link sign-in. Disable anonymous sign-ins after existing anonymous users have migrated. Set the production PWA origin as the Site URL and an allowed Redirect URL. Add the local Vite origin only for development.
 
-To use separate groups later, just change `GROUP_CODE` — the first person to use a new
-code creates that group; everyone with the same code shares one feed.
+## 3. Edge Functions
 
-## How it's wired
-- `src/data/config.js` — your keys + group code. `isBackendConfigured()` flips the app
-  between local and Supabase automatically.
-- `src/data/supabase.js` — the client (sessions persist on-device via AsyncStorage).
-- `src/data/api.js` — same four functions (`getFeed`, `addPost`, `toggleAmen`,
-  `subscribe`); the Supabase versions use the `feed_with_amens` view + Realtime.
-- `supabase/schema.sql` — the database. Row-Level Security ensures people only read and
-  write inside groups they belong to.
+Deploy:
 
-## Security notes
-- The anon key is meant to ship in the app; **Row-Level Security** (in the schema) is
-  what protects the data, not the key.
-- "Amen" is de-duplicated per signed-in device. Display names aren't unique, so the
-  "you amen'd this" highlight matches by name — fine for a small group.
-- Posts are deletable only by their author (policy `posts_delete`).
+```bash
+npx supabase functions deploy notify-group --no-verify-jwt
+npx supabase functions deploy notify-reminders --no-verify-jwt
+npx supabase functions deploy admin-data --no-verify-jwt
+npx supabase functions deploy delete-account --no-verify-jwt
+```
+
+Set secrets:
+
+```bash
+npx supabase secrets set VAPID_PUBLIC=... VAPID_PRIVATE=... VAPID_SUBJECT=mailto:your-real-contact@example.com
+npx supabase secrets set NOTIFY_SECRET=... CRON_SECRET=... ADMIN_KEY=... ALLOWED_ORIGINS=https://your-pwa.example
+```
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to deployed Supabase functions. Never place the service-role key or VAPID private key in browser code.
+
+The release bundles only public-domain KJV scripture. Do not enable or bundle another translation without documenting the provider license and its required attribution.
+
+Store the same `NOTIFY_SECRET` value in Supabase Vault before applying `notifications.sql`:
+
+```sql
+select vault.create_secret('replace-with-the-same-random-value', 'notify_secret');
+```
+
+## 4. Scheduled reminders
+
+Schedule an authenticated POST to `/functions/v1/notify-reminders` every minute using Supabase Cron. Send the `CRON_SECRET` value in the `x-cron-secret` header. The function compares each subscription’s timezone and preferred local hour/minute and records the date after a successful push, preventing duplicates.
+
+## 5. Group notifications
+
+`notifications.sql` installs the post-insert trigger that calls `notify-group` with the shared Vault secret. The function sends standards-based Web Push only to other group members. The payload includes the group ID so tapping the phone alert opens the correct feed.
+
+## 6. Voice privacy
+
+The `voice` bucket must be private. Files live under the uploader’s user-ID folder. Playback uses one-hour signed URLs; storage policies let group members sign a path only when a visible group post references it. Only the owner can upload or delete a path.

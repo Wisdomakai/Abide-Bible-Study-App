@@ -13,16 +13,16 @@
 Ardent is a calm, simple place for your Bible study group to grow together.
 
 Each day opens with a shared Verse of the Day — the same passage for everyone in your
-group — in your choice of KJV, NIV, or NLT. Read it, then write what God is saying to you.
+group — in the public-domain King James Version. Read it, then write what God is saying to you.
 
-• Daily verse with KJV / NIV / NLT toggle
+• Daily verse and chapter reading in KJV
 • A private space to journal your reflections, with a gentle daily reminder
 • Study notes you can tag and search
 • Track prayer requests and mark them answered — remembering His faithfulness
 • A shared group feed: post reflections, notes, and prayers, and encourage one another
   with an "Amen"
-• Join your group with a simple invite code — no email or password needed
-• Your personal journal stays private on your device
+• Secure passwordless email sign-in keeps your journal synced across devices
+• Strong private invite codes and temporary signed access for voice recordings
 
 Whether you meet weekly or stay connected through the week, Ardent helps your group
 study, reflect, and pray — together.
@@ -40,10 +40,11 @@ Made with love for Bible study groups.
 ## Data safety form answers (Play Console → App content → Data safety)
 - Does your app collect or share user data? **Yes**
 - Data types collected:
-  • Name (App functionality; not shared; not for ads)
+  • Email and name (Authentication and app functionality; not for ads)
   • Photos/Other user content → "Other in-app content" = your group posts/prayers
     (App functionality; not shared with third parties for ads)
-  • Device or other IDs → push token (App functionality / messaging)
+  • Device or other IDs → Web Push subscription endpoint (App functionality / messaging)
+  • Audio → voice notes the user records (App functionality; private or shared at the user’s direction)
 - Is data encrypted in transit? **Yes**
 - Can users request deletion? **Yes** (via email + in-app post deletion)
 - Is data sold? **No**

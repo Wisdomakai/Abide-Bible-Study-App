@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.ardentbiblestudy.app",
+        "sha256_cert_fingerprints": ["2D:1F:7A:85:31:1C:6A:98:E7:C1:26:42:F1:D2:60:51:72:F9:7D:2D:FD:14:19:FD:B2:80:78:D5:9A:DD:48:19"]
+      }
+    }]

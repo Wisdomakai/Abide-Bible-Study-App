@@ -131,5 +131,20 @@ create view public.feed_with_amens with (security_invoker = on) as
   group by p.id;
 
 -- ── Realtime: broadcast inserts/updates/deletes on posts & amens. ────────────
-alter publication supabase_realtime add table public.posts;
-alter publication supabase_realtime add table public.amens;
+-- Publication membership is not covered by IF NOT EXISTS in PostgreSQL, so
+-- guard each table explicitly to keep this migration safe to re-run.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'posts'
+  ) then
+    alter publication supabase_realtime add table public.posts;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'amens'
+  ) then
+    alter publication supabase_realtime add table public.amens;
+  end if;
+end $$;

@@ -1,29 +1,34 @@
 -- ============================================================================
--- Push notifications add-on. Run AFTER schema.sql.
--- Sends an Expo push to the other group members when someone posts.
+-- PWA Web Push trigger. Run after pwa.sql.
 -- Requires the Edge Function `notify-group` to be deployed (see BUILD.md).
 -- ============================================================================
 
--- 1. Store each member's Expo push token.
-alter table public.profiles add column if not exists push_token text;
-
--- 2. Let the app save its own token (already covered by profiles_write policy).
-
--- 3. When a post is inserted, call the Edge Function to fan out notifications.
+-- When a post is inserted, call the Edge Function to fan out notifications.
 --    Uses pg_net (enabled by default on Supabase) to make the HTTP call.
 create extension if not exists pg_net;
 
--- Values are hardcoded here because Supabase's managed `postgres` role can't
--- set custom database parameters. The function URL is public and the key below
--- is the publishable (anon) key — both are safe to embed.
+-- The shared webhook secret is stored in Supabase Vault. This prevents callers
+-- from invoking the unauthenticated Edge Function with arbitrary post IDs.
 create or replace function public.on_new_post_notify()
 returns trigger language plpgsql security definer set search_path = public, extensions as $$
+declare
+  notify_secret text;
 begin
+  select decrypted_secret into notify_secret
+  from vault.decrypted_secrets
+  where name = 'notify_secret'
+  limit 1;
+
+  if notify_secret is null then
+    raise warning 'notify_group webhook skipped: notify_secret is missing from Vault';
+    return new;
+  end if;
+
   perform net.http_post(
     url     := 'https://udnczmdjjiltpehtvtas.functions.supabase.co/notify-group',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer sb_publishable_sp9QVgDEqcd0YBpyL8h9xQ__84AG-1I'
+      'x-webhook-secret', notify_secret
     ),
     body    := jsonb_build_object('post_id', new.id)
   );

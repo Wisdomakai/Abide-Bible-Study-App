@@ -12,38 +12,38 @@
 </head>
 <body>
   <h1>Privacy Policy — Ardent</h1>
-  <p class="muted">Last updated: 26 June 2026</p>
+  <p class="muted">Last updated: 17 July 2026</p>
 
   <p>Ardent ("the app", "we", "us") is a journaling app for Bible study groups. This policy
   explains what information the app handles and how. By using Ardent you agree to this policy.</p>
 
   <h2>Information we handle</h2>
   <ul>
-    <li><strong>Your name</strong> — the first name you enter, used to identify your posts to your group.</li>
-    <li><strong>Personal journal &amp; reflections</strong> — stored <em>only on your device</em>. We do not upload them.</li>
-    <li><strong>Prayers</strong> — stored on your device. If you choose to <em>share</em> a prayer to your group, that shared copy is stored on our server.</li>
+    <li><strong>Your email and name</strong> — used for secure passwordless sign-in, journal sync, and identifying posts you choose to share.</li>
+    <li><strong>Personal journal, reflections, notes, and prayers</strong> — encrypted in transit and stored in your private Supabase account row so they remain available across your devices.</li>
     <li><strong>Group posts</strong> — reflections, notes, and prayers you choose to share, plus "Amen" reactions, are stored on our server so your group members can see them.</li>
-    <li><strong>Notification token</strong> — if you enable notifications, a device push token is stored so we can notify your group when someone posts.</li>
-    <li><strong>Account</strong> — we create an anonymous account for your device (no email or password required).</li>
+    <li><strong>Voice recordings</strong> — recordings you add are stored in a private bucket. Group members receive temporary signed access only when you share the recording in their group.</li>
+    <li><strong>Web Push subscription and reminder preferences</strong> — stored only after you explicitly enable notifications, including your browser push endpoint, timezone, and chosen reminder time.</li>
+    <li><strong>Account activity</strong> — recent sign-in/presence times are retained for security and aggregate service administration.</li>
   </ul>
 
   <h2>How we use it</h2>
   <p>Solely to provide the app's features: showing your group's shared feed, sending the
-  notifications you opt into, and saving your journal on your device. We do <strong>not</strong>
+    notifications you opt into, and syncing your private journal across your devices. We do <strong>not</strong>
   sell your data, show ads, or use it for advertising or profiling.</p>
 
   <h2>Service providers</h2>
   <ul>
     <li><strong>Supabase</strong> — stores the shared group feed and accounts. See supabase.com/privacy.</li>
-    <li><strong>Expo</strong> — delivers push notifications. See expo.dev/privacy.</li>
+    <li><strong>Your browser/device push service</strong> — delivers Web Push notifications after you opt in.</li>
     <li><strong>bible-api.com</strong> — supplies verse text (KJV); only the verse reference is requested.</li>
   </ul>
 
   <h2>Data retention &amp; deletion</h2>
-  <p>You can delete your own group posts in the app at any time, which removes them for everyone.
-  Deleting a journal note or prayer that you shared also removes its shared copy. Your on-device
-  journal is removed if you uninstall the app. To delete your account and all associated shared
-  data, contact us at the email below and we will remove it.</p>
+  <p>You can delete your own group posts in the app at any time. Deleting a journal note or prayer
+  also removes every shared copy and its owned recording before the local item is removed. Settings
+  includes a self-service “Delete account and data” action that permanently deletes the account,
+  journal, memberships, posts, reactions, subscriptions, and owned voice files.</p>
 
   <h2>Children</h2>
   <p>Ardent is intended for general audiences and is not directed at children under 13.</p>
@@ -51,7 +51,8 @@
   <h2>Changes</h2>
   <p>We may update this policy; material changes will be reflected here with a new date.</p>
 
-  <h2>Contact</h2>
-  <p>Questions or deletion requests: <a href="mailto:REPLACE_WITH_YOUR_EMAIL">REPLACE_WITH_YOUR_EMAIL</a></p>
+  <h2>Your choices</h2>
+  <p>You can disable browser notifications in your device settings, sign out without deleting data,
+  or permanently remove your account and data from Ardent Settings.</p>
 </body>
 </html>
