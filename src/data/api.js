@@ -147,6 +147,10 @@ const supaApi = {
       // Ensures membership in the user's default group + stamps last_seen/login.
       try { await supaApi.joinGroupByCode(profile.groupCode, profile.name, profile.groupName, profile.name); } catch (_) {}
     }
+    // The login row itself is written by the record-login Edge Function, which
+    // is the only place that can see the request's country. Never block the
+    // app on it — admin analytics failing must not stop anyone using Ardent.
+    supabase.functions.invoke('record-login').catch(() => {});
   },
 
   async getMyGroups() {

@@ -28,10 +28,15 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
-  // logins table may not exist yet (admin.sql not run) — tolerate that.
-  const loginsQuery = supabase.from('logins').select('name, group_code, created_at')
-    .order('created_at', { ascending: false }).limit(150)
-    .then((r) => r.data ?? []).catch(() => []);
+  // logins table may not exist yet (admin.sql not run) — tolerate that. The
+  // country column arrives with country-tracking.sql, so it may be absent too;
+  // a wide window feeds the country totals while the table shows the newest.
+  const loginsQuery = supabase.from('logins').select('user_id, name, group_code, country, created_at')
+    .order('created_at', { ascending: false }).limit(2000)
+    .then((r) => r.data ?? [])
+    .catch(() => supabase.from('logins').select('user_id, name, group_code, created_at')
+      .order('created_at', { ascending: false }).limit(2000)
+      .then((r) => r.data ?? []).catch(() => []));
 
   const [{ data: profiles }, { data: memberships }, { data: groups }, { data: posts }, logins] =
     await Promise.all([
@@ -62,6 +67,32 @@ Deno.serve(async (req) => {
   const membersByGroup = new Map<string, number>();
   for (const m of memberships ?? []) membersByGroup.set(m.group_id, (membersByGroup.get(m.group_id) ?? 0) + 1);
 
+  // Country totals. `logins` is newest-first, so the first row seen for a user
+  // is their latest known country.
+  const loginsByCountry = new Map<string, number>();
+  const usersByCountry = new Map<string, Set<string>>();
+  const countryByUser = new Map<string, string>();
+  for (const l of logins ?? []) {
+    if (!l.country) continue;
+    loginsByCountry.set(l.country, (loginsByCountry.get(l.country) ?? 0) + 1);
+    if (l.user_id) {
+      if (!countryByUser.has(l.user_id)) countryByUser.set(l.user_id, l.country);
+      const set = usersByCountry.get(l.country) ?? new Set<string>();
+      set.add(l.user_id);
+      usersByCountry.set(l.country, set);
+    }
+  }
+  let regionName: (code: string) => string;
+  try {
+    const display = new Intl.DisplayNames(['en'], { type: 'region' });
+    regionName = (code) => display.of(code) ?? code;
+  } catch (_) {
+    regionName = (code) => code; // Intl region data unavailable — show the code.
+  }
+  const countries = [...loginsByCountry.entries()]
+    .map(([code, count]) => ({ code, name: regionName(code), logins: count, users: usersByCountry.get(code)?.size ?? 0 }))
+    .sort((a, b) => b.users - a.users || b.logins - a.logins);
+
   const users = (profiles ?? []).map((u) => {
     const userGroups = memberGroups.get(u.id) ?? [];
     const pu = postsByUser.get(u.id) ?? { count: 0, last: null };
@@ -69,6 +100,7 @@ Deno.serve(async (req) => {
       name: u.name, group: userGroups.map((g) => g.name).join(', ') || '—', groupCode: userGroups.map((g) => g.code).join(', '),
       joined: u.created_at, lastSeen: u.last_seen ?? u.created_at,
       posts: pu.count, lastPost: pu.last, push: !!u.push_token,
+      country: countryByUser.get(u.id) ?? null,
     };
   }).sort((a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime());
 
@@ -88,9 +120,10 @@ Deno.serve(async (req) => {
     groups: groupList.length,
     posts: (posts ?? []).length,
     loginsToday: (logins ?? []).filter((l) => now - t(l.created_at) < DAY).length,
+    countries: countries.length,
   };
 
-  return new Response(JSON.stringify({ stats, users, groups: groupList, logins: logins ?? [] }), {
+  return new Response(JSON.stringify({ stats, users, groups: groupList, countries, logins: (logins ?? []).slice(0, 150) }), {
     headers: { ...cors, 'Content-Type': 'application/json' },
   });
 });

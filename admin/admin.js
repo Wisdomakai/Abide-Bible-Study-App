@@ -10,6 +10,16 @@ const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
 let activePassword = '';
 
 const initials = (name) => (name || '?').trim().slice(0, 2).toUpperCase();
+
+// ISO 3166-1 alpha-2 -> flag emoji, by offsetting each letter into the
+// regional-indicator block. Anything else renders as a dash.
+const flagEmoji = (code) => (/^[A-Za-z]{2}$/.test(code || '')
+  ? String.fromCodePoint(...[...code.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65))
+  : '');
+
+const flag = (code) => (/^[A-Za-z]{2}$/.test(code || '')
+  ? `${flagEmoji(code)} ${esc(code.toUpperCase())}`
+  : '<span class="muted">—</span>');
 const fmt = (timestamp) => timestamp
   ? new Date(timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
   : '—';
@@ -45,15 +55,19 @@ async function load(password) {
     $('stats').innerHTML = [
       ['Total users', stats.users], ['Active 24h', stats.active24], ['Active 7d', stats.active7],
       ['Notifications', stats.pushOn], ['Groups', stats.groups], ['Posts', stats.posts],
-      ['Logins today', stats.loginsToday],
+      ['Logins today', stats.loginsToday], ['Countries', stats.countries ?? 0],
     ].map(([label, number]) => `<div class="stat"><div class="n">${esc(number)}</div><div class="l">${esc(label)}</div></div>`).join('');
     $('users').innerHTML = data.users.length ? data.users.map((user) => `<tr>
       <td><span class="avatar">${esc(initials(user.name))}</span>${esc(user.name || '(no name)')}</td>
-      <td><span class="chip">${esc(user.group)}</span></td><td>${esc(fmt(user.joined))}</td><td>${esc(ago(user.lastSeen))}</td>
+      <td><span class="chip">${esc(user.group)}</span></td><td>${flag(user.country)}</td><td>${esc(fmt(user.joined))}</td><td>${esc(ago(user.lastSeen))}</td>
       <td>${esc(user.posts)}</td><td>${esc(ago(user.lastPost))}</td>
-      <td><span class="badge ${user.push ? 'on' : 'off'}">${user.push ? 'On' : 'Off'}</span></td></tr>`).join('') : '<tr><td colspan="7" class="muted">No users yet.</td></tr>';
+      <td><span class="badge ${user.push ? 'on' : 'off'}">${user.push ? 'On' : 'Off'}</span></td></tr>`).join('') : '<tr><td colspan="8" class="muted">No users yet.</td></tr>';
     $('groups').innerHTML = data.groups.length ? data.groups.map((group) => `<tr><td>${esc(group.name)}</td><td><span class="chip">${esc(group.code)}</span></td><td>${esc(group.members)}</td><td>${esc(group.posts)}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">No groups yet.</td></tr>';
-    $('logins').innerHTML = data.logins.length ? data.logins.map((login) => `<tr><td>${esc(login.name || '—')}</td><td><span class="chip">${esc(login.group_code || '—')}</span></td><td>${esc(ago(login.created_at))}</td></tr>`).join('') : '<tr><td colspan="3" class="muted">No logins recorded yet.</td></tr>';
+    const countries = data.countries || [];
+    $('countries').innerHTML = countries.length
+      ? countries.map((c) => `<tr><td>${flagEmoji(c.code)} ${esc(c.name)}</td><td><span class="chip">${esc(c.code)}</span></td><td>${esc(c.users)}</td><td>${esc(c.logins)}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="muted">No country data yet — sign in from the app once country-tracking.sql and the record-login function are deployed.</td></tr>';
+    $('logins').innerHTML = data.logins.length ? data.logins.map((login) => `<tr><td>${esc(login.name || '—')}</td><td><span class="chip">${esc(login.group_code || '—')}</span></td><td>${flag(login.country)}</td><td>${esc(ago(login.created_at))}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">No logins recorded yet.</td></tr>';
     $('updated').textContent = `updated ${new Date().toLocaleTimeString()}`;
   } catch (error) {
     console.error('Admin data request failed:', error);
