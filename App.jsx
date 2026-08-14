@@ -101,13 +101,30 @@ function Root() {
   return (
     <View style={styles.appWrap}>
       <Stack.Navigator
-        screenOptions={{
+        screenOptions={({ navigation }) => ({
           headerStyle: { backgroundColor: colors.bg },
           headerShadowVisible: false,
           headerTintColor: colors.primary,
           headerTitleStyle: { fontFamily: fonts.bodySemi, color: colors.text },
           contentStyle: { backgroundColor: colors.bg },
-        }}
+          // The library's own back arrow is a bundled PNG loaded via require(),
+          // which the production build cannot resolve — it renders an invisible
+          // but tappable button. Drawing it from our icon set keeps it visible
+          // and matches the rest of the app.
+          headerLeft: navigation.canGoBack()
+            ? () => (
+                <Pressable
+                  onPress={() => navigation.goBack()}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back"
+                  style={({ pressed }) => [styles.headerBack, pressed && { opacity: 0.6 }]}
+                >
+                  <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                </Pressable>
+              )
+            : undefined,
+        })}
       >
         <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
         <Stack.Screen name="NoteEditor" component={NoteEditorScreen} options={{ title: 'Note', headerBackTitleVisible: false }} />
@@ -155,6 +172,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   appWrap: { flex: 1 },
+  headerBack: { paddingRight: 6, justifyContent: 'center' },
   webAlert: {
     position: 'absolute',
     left: 16,

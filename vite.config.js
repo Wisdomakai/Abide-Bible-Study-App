@@ -56,6 +56,11 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
+    // @react-navigation/elements ships ES modules that call require() for the
+    // header back-arrow images. Dev pre-bundling rewrites those, but the
+    // production bundle kept them literal, so every screen with a stack header
+    // (note editor, settings, notifications) died on `require is not defined`.
+    commonjsOptions: { transformMixedEsModules: true },
     rollupOptions: {
       input: {
         app: resolve(import.meta.dirname, 'index.html'),

@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 const root = path.resolve(import.meta.dirname, '..');
 const toolsDir = path.join(root, '.android-tools');
 const androidDir = path.join(root, 'android');
-const outputName = 'Ardent-Bible-Study-v1.3.0.apk';
+const outputName = 'Ardent-Bible-Study-v1.3.1.apk';
 const signing = JSON.parse(await fs.readFile(path.join(toolsDir, 'signing.json'), 'utf8'));
 const javaHome = path.join(toolsDir, 'jdk', 'jdk-17.0.11+9', 'Contents', 'Home');
 
