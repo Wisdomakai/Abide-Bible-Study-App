@@ -150,8 +150,11 @@ export default function SettingsScreen({ navigation }) {
 
       <SectionTitle style={{ marginTop: spacing.xl }}>Bible text</SectionTitle>
       <Card>
-        <Text style={styles.copy}>Bundled verses and chapter reading use the public-domain King James Version.</Text>
-        <Text style={styles.copySmall}>Scripture quotations marked KJV are from the King James Version (public domain).</Text>
+        <Text style={styles.copy}>Choose a translation on the Today and Bible screens. All four are in the public domain.</Text>
+        <Text style={styles.copySmall}>
+          KJV — King James Version. WEB — World English Bible. ASV — American Standard Version (1901).
+          BBE — Bible in Basic English. All are public domain; chapter text is served by bible-api.com.
+        </Text>
       </Card>
 
       <View style={styles.footer}>

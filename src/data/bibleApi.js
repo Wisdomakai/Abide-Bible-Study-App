@@ -9,7 +9,8 @@ import { loadJSON, saveJSON } from './storage';
 import { BIBLE_API_KEY, BIBLE_IDS } from './config';
 
 const CACHE_KEY = 'bj.verseCache';
-const NO_KEY_CODES = { KJV: 'kjv', NIV: null, NLT: null }; // bible-api.com lacks NIV/NLT
+// bible-api.com serves public-domain texts only, which is all the app offers.
+const NO_KEY_CODES = { KJV: 'kjv', WEB: 'web', ASV: 'asv', BBE: 'bbe' };
 
 function stripHtml(s) {
   return (s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -46,9 +47,9 @@ async function fromBibleApiCom(ref, translation) {
   return json?.text ? json.text.replace(/\s+/g, ' ').trim() : null;
 }
 
-// bible-api.com supports public-domain translations by code (KJV, WEB…).
-// NIV/NLT aren't available there, so the reader shows KJV for those.
-const CHAPTER_CODE = { KJV: 'kjv', WEB: 'web', NIV: 'kjv', NLT: 'kjv' };
+// Never alias one translation to another's text here: the reader labels the
+// chapter with the translation the reader asked for.
+const CHAPTER_CODE = { KJV: 'kjv', WEB: 'web', ASV: 'asv', BBE: 'bbe' };
 const CHAPTER_CACHE = 'bj.chapterCache';
 
 // Fetch a whole chapter: returns { verses: [{ verse, text }], translationName }.

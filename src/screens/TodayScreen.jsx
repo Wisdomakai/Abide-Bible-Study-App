@@ -15,7 +15,7 @@ import { colors, fonts, spacing, radius, shadow } from '../theme';
 export default function TodayScreen({ navigation }) {
   const { profile, reflections, saveReflection, streak, translation, setTranslation, groups, refreshNotifications } = useApp();
   const verse = getVerseForDate();
-  const { text: verseText } = useVerseText(verse, translation);
+  const { text: verseText, shownTranslation } = useVerseText(verse, translation);
   const todayKey = dateKey();
   const [text, setText] = useState(reflections[todayKey]?.text || '');
   const [sharing, setSharing] = useState(false);
@@ -99,9 +99,12 @@ export default function TodayScreen({ navigation }) {
         {/* Verse of the day */}
         <Card style={styles.verseCard}>
           <Pill label="Verse of the day" tone="gold" icon="sunny-outline" />
-          <Text style={styles.verseText}>“{verseText}”</Text>
+          <Text style={styles.verseText}>{verseText ? `“${verseText}”` : 'Loading…'}</Text>
           <View style={styles.verseFoot}>
-            <Text style={styles.verseRef}>{verse.ref}</Text>
+            <Text style={styles.verseRef}>
+              {verse.ref}
+              {shownTranslation && shownTranslation !== translation ? ` · ${shownTranslation}` : ''}
+            </Text>
             <View style={styles.transToggle}>
               {TRANSLATIONS.map((t) => (
                 <Pressable

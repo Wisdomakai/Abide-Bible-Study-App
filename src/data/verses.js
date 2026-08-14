@@ -1,6 +1,13 @@
-// Bundled scripture is limited to the public-domain King James Version. Add a
-// licensed translation only through an approved provider and documented terms.
-export const TRANSLATIONS = ['KJV'];
+// Every offered translation is public domain. Copyrighted texts (NIV, NLT, ESV…)
+// may only be added through an approved provider with documented terms.
+export const TRANSLATIONS = ['KJV', 'WEB', 'ASV', 'BBE'];
+
+export const TRANSLATION_NAMES = {
+  KJV: 'King James Version',
+  WEB: 'World English Bible',
+  ASV: 'American Standard Version (1901)',
+  BBE: 'Bible in Basic English',
+};
 
 export const VERSES = [
   { ref: 'John 3:16', kjv: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.' },
@@ -38,6 +45,9 @@ export function getVerseForDate(date = new Date()) {
   return VERSES[((dayNumber % VERSES.length) + VERSES.length) % VERSES.length];
 }
 
-export function textFor(verse) {
-  return verse.kjv;
+// Only the KJV is bundled. Returning it for another translation would print
+// KJV wording under that translation's name, so callers get null instead and
+// show the live text once it loads.
+export function textFor(verse, translation = 'KJV') {
+  return translation === 'KJV' ? verse.kjv : null;
 }
