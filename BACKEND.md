@@ -22,10 +22,10 @@ In Authentication → Providers, enable Email and magic-link sign-in. Disable an
 Deploy:
 
 ```bash
-npx supabase functions deploy notify-group --no-verify-jwt
-npx supabase functions deploy notify-reminders --no-verify-jwt
-npx supabase functions deploy admin-data --no-verify-jwt
-npx supabase functions deploy delete-account --no-verify-jwt
+npx supabase functions deploy notify-group
+npx supabase functions deploy notify-reminders
+npx supabase functions deploy admin-data
+npx supabase functions deploy delete-account
 ```
 
 Set secrets:

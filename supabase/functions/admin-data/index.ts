@@ -3,7 +3,9 @@
 // service-role key SERVER-SIDE. Protected by an admin password compared against
 // the ADMIN_KEY secret — so the hosted admin page never holds the service key.
 //
-// Deploy:  npx supabase functions deploy admin-data --no-verify-jwt
+// Deploy:  npx supabase functions deploy admin-data
+//          (verify_jwt = false is set in supabase/config.toml — the page sends
+//           x-admin-key, not a JWT, so the platform gate must stay off here.)
 // Secret:  npx supabase secrets set ADMIN_KEY=your-password
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 

@@ -3,7 +3,7 @@
 // members of that post's group two ways:
 //   • Installed PWA / browser — Web Push through the device push service
 //
-// Deploy:  npx supabase functions deploy notify-group --no-verify-jwt
+// Deploy:  npx supabase functions deploy notify-group  (verify_jwt = false in config.toml)
 // Secrets needed: NOTIFY_SECRET, VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';

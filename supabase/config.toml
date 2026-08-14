@@ -371,6 +371,31 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
+# The admin dashboard authenticates with its own x-admin-key header and sends no
+# JWT, so the platform's JWT gate has to be off for this one function or every
+# request is rejected before it runs. This replaces the deprecated
+# --no-verify-jwt flag. Its own key check is in functions/admin-data/index.ts.
+[functions.admin-data]
+verify_jwt = false
+
+# These three were also deployed with the old flag and authenticate callers
+# themselves, so their gates stay off or a redeploy would start rejecting live
+# traffic: delete-account verifies the user's JWT in code, notify-group checks
+# NOTIFY_SECRET, and notify-reminders checks x-cron-secret.
+[functions.delete-account]
+verify_jwt = false
+
+[functions.notify-group]
+verify_jwt = false
+
+[functions.notify-reminders]
+verify_jwt = false
+
+# record-login is called by signed-in users and must keep the JWT gate on; it
+# verifies the caller again itself before writing anything.
+[functions.record-login]
+verify_jwt = true
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
