@@ -3,8 +3,10 @@
   "appName": "Ardent Bible Study",
   "webDir": "dist",
   "server": {
+    "url": "https://ardent-study.vercel.app",
     "hostname": "ardent-study.vercel.app",
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "cleartext": false
   },
   "plugins": {
     "LocalNotifications": {
