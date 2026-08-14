@@ -3,9 +3,8 @@ android/
 android-twa/
 node_modules/
 *.aab
-/Ardent-Bible-Study-v1.0.0.apk
-/Ardent-Bible-Study-Full-Test-v1.1.0.apk
-/Ardent-Bible-Study-v1.2.0.apk
-/Ardent-Bible-Study-v1.3.0.apk
-/Ardent-Bible-Study-v1.3.1.apk
-/Ardent-Bible-Study-v1.3.2.apk
+# Root-anchored on purpose: the build script leaves a copy of the signed APK at
+# the repo root which must not be uploaded, while the published one under
+# public/downloads/ must be. A bare *.apk would exclude both and 404 the
+# download link.
+/*.apk
