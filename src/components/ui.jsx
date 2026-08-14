@@ -144,6 +144,19 @@ export function confirmDestructive({ title, message, confirmText = 'Delete', onC
   ]);
 }
 
+// react-native-web's Alert.alert is an empty function, so every Alert.alert in
+// this app was silently discarded — failures looked like the button doing
+// nothing at all. Route messages through window.alert on web, the same way
+// confirmDestructive already handles confirmations.
+export function notify(title, message) {
+  const text = `${title}${message ? `\n\n${message}` : ''}`;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.alert(text);
+    return;
+  }
+  Alert.alert(title, message || '');
+}
+
 export function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 60) return 'just now';

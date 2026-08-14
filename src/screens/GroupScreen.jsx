@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, Modal, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet, Modal, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '../components/Icon';
 import { useApp } from '../data/AppContext';
 import { getFeed, getGroupMembers, addPost, toggleAmen, deletePost, subscribe } from '../data/api';
-import { Pill, EmptyState, timeAgo, LinkText, LinkPreview, confirmDestructive } from '../components/ui';
+import { Pill, EmptyState, timeAgo, LinkText, LinkPreview, confirmDestructive, notify } from '../components/ui';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
 import { deleteVoice, uploadVoice } from '../data/voice';
@@ -70,7 +70,7 @@ export default function GroupScreen({ navigation }) {
         .map((member) => member.userId);
       await addPost(selectedGroupId, { author: profile.name, type: 'note', text: draft.trim(), mentionedUserIds });
       setDraft(''); setComposing(false); await refresh();
-    } catch (_) { Alert.alert('Couldn’t post', 'Check your connection and try again.'); }
+    } catch (_) { notify('Couldn’t post', 'Check your connection and try again.'); }
     finally { setSending(false); }
   };
   const handleVoice = async (uri, dur) => {
@@ -86,7 +86,7 @@ export default function GroupScreen({ navigation }) {
       }
       setComposing(false); await refresh();
     } catch (e) {
-      Alert.alert('Couldn’t send voice', String(e?.message || e));
+      notify('Couldn’t send voice', String(e?.message || e));
     } finally { setSending(false); }
   };
 
@@ -94,7 +94,7 @@ export default function GroupScreen({ navigation }) {
     try {
       const updated = await toggleAmen(postId, profile.name);
       if (updated) setFeed((items) => items.map((item) => item.id === postId ? updated : item));
-    } catch (_) { Alert.alert('Couldn’t add Amen', 'Please try again.'); }
+    } catch (_) { notify('Couldn’t add Amen', 'Please try again.'); }
   };
   const onDelete = (postId) => {
     confirmDestructive({
@@ -104,7 +104,7 @@ export default function GroupScreen({ navigation }) {
       onConfirm: async () => {
         const before = feed;
         setFeed((f) => f.filter((p) => p.id !== postId));
-        try { await deletePost(postId); } catch (e) { setFeed(before); Alert.alert('Couldn’t delete', 'Please try again.'); }
+        try { await deletePost(postId); } catch (e) { setFeed(before); notify('Couldn’t delete', 'Please try again.'); }
         await refresh().catch(() => {});
       },
     });

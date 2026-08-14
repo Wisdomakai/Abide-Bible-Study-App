@@ -1,12 +1,12 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, TextInput, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '../components/Icon';
 import { useApp } from '../data/AppContext';
 import { addPost } from '../data/api';
 import GroupChooser from '../components/GroupChooser';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
-import { confirmDestructive } from '../components/ui';
+import { confirmDestructive, notify } from '../components/ui';
 import { deleteVoiceIfUnreferenced, signedVoiceUrl, uploadVoice } from '../data/voice';
 import { colors, fonts, spacing, radius } from '../theme';
 
@@ -51,7 +51,7 @@ export default function NoteEditorScreen({ route, navigation }) {
       const savedId = upsertNote({ id: noteId, title: title.trim(), body: body.trim(), tag: tag.trim(), verseRef, audioUrl: path, audioDuration: dur, detachedAudioUrls });
       setNoteId(savedId);
     } catch (e) {
-      Alert.alert('Couldn’t save recording', String(e?.message || e));
+      notify('Couldn’t save recording', String(e?.message || e));
     } finally { setRecBusy(false); }
   };
 
@@ -73,7 +73,7 @@ export default function NoteEditorScreen({ route, navigation }) {
 
   const onShare = () => {
     if (!body.trim() && !title.trim() && !audio) return;
-    if (groups.length === 0) { Alert.alert('No group yet', 'Create or join a group first (Group tab).'); return; }
+    if (groups.length === 0) { notify('No group yet', 'Create or join a group first (Group tab).'); return; }
     const text = (title ? title + '\n\n' : '') + body;
     if (groups.length === 1) shareTo(groups[0], text);
     else setPendingShare(text);
@@ -91,8 +91,8 @@ export default function NoteEditorScreen({ route, navigation }) {
       });
       const current = notes.find((note) => note.id === savedId);
       upsertNote({ id: savedId, sharedPostIds: [...new Set([...(current?.sharedPostIds || []), current?.sharedPostId, post.id].filter(Boolean))], sharedPostId: undefined });
-      Alert.alert('Shared', `Your note was posted to ${group.name}.`);
-    } catch (_) { Alert.alert('Couldn’t share', 'Check your connection and try again.'); }
+      notify('Shared', `Your note was posted to ${group.name}.`);
+    } catch (_) { notify('Couldn’t share', 'Check your connection and try again.'); }
     finally { setSharing(false); }
   };
 
@@ -103,7 +103,7 @@ export default function NoteEditorScreen({ route, navigation }) {
       confirmText: 'Delete',
       onConfirm: async () => {
         try { await deleteNote(noteId); navigation.goBack(); }
-        catch (_) { Alert.alert('Couldn’t delete', 'The shared copies could not be removed. Nothing was deleted locally.'); }
+        catch (_) { notify('Couldn’t delete', 'The shared copies could not be removed. Nothing was deleted locally.'); }
       },
     });
   };
@@ -122,7 +122,7 @@ export default function NoteEditorScreen({ route, navigation }) {
           detachedAudioUrls: removed ? (existing?.detachedAudioUrls || []) : [...new Set([...(existing?.detachedAudioUrls || []), previous.path])],
         });
       } catch (_) {
-        Alert.alert('Couldn’t remove recording', 'Nothing was changed. Please check your connection and try again.');
+        notify('Couldn’t remove recording', 'Nothing was changed. Please check your connection and try again.');
       }
     },
   });

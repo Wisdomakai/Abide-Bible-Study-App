@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '../components/Icon';
 import { useApp } from '../data/AppContext';
-import { Button } from '../components/ui';
+import { Button, notify } from '../components/ui';
 import GroupPicker from '../components/GroupPicker';
 import { createGroup, joinGroupByCode } from '../data/api';
 import { colors, fonts, spacing, radius } from '../theme';
@@ -24,8 +24,11 @@ export default function OnboardingScreen() {
         : picker.code;
       if (picker.mode === 'join') await joinGroupByCode(groupCode, name.trim());
       saveProfile({ name: name.trim(), groupCode, groupName: picker.groupName || 'Our Bible Study' });
-    } catch (_) {
-      Alert.alert('Couldn’t save group', picker.mode === 'join' ? 'That invite code was not found.' : 'Please try again with a new invite code.');
+    } catch (error) {
+      // Include the underlying reason: a generic message here left "Begin"
+      // looking like it did nothing at all.
+      const hint = picker.mode === 'join' ? 'That invite code was not found.' : 'Please try again with a new invite code.';
+      notify('Couldn’t save group', `${hint}\n\n${error?.message || error}`);
     } finally { setBusy(false); }
   };
 

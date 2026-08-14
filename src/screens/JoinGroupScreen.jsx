@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useApp } from '../data/AppContext';
 import { createGroup, joinGroupByCode } from '../data/api';
 import GroupPicker from '../components/GroupPicker';
-import { Button } from '../components/ui';
+import { Button, notify } from '../components/ui';
 import { colors, fonts, spacing } from '../theme';
 
 export default function JoinGroupScreen({ navigation }) {
@@ -23,7 +23,7 @@ export default function JoinGroupScreen({ navigation }) {
       if (id) selectGroup(id);
       navigation.goBack();
     } catch (e) {
-      Alert.alert('Couldn’t join', 'Please check the code and your connection, then try again.');
+      notify('Couldn’t join', 'Please check the code and your connection, then try again.');
     } finally {
       setBusy(false);
     }

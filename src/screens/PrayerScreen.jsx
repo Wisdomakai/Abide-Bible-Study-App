@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '../components/Icon';
 import { useApp } from '../data/AppContext';
 import { addPost } from '../data/api';
 import GroupChooser from '../components/GroupChooser';
-import { Card, EmptyState, timeAgo, confirmDestructive } from '../components/ui';
+import { Card, EmptyState, timeAgo, confirmDestructive, notify } from '../components/ui';
 import { colors, fonts, spacing, radius, shadow } from '../theme';
 
 export default function PrayerScreen() {
@@ -28,7 +28,7 @@ export default function PrayerScreen() {
   };
 
   const shareToGroup = (p) => {
-    if (groups.length === 0) { Alert.alert('No group yet', 'Create or join a group first (Group tab).'); return; }
+    if (groups.length === 0) { notify('No group yet', 'Create or join a group first (Group tab).'); return; }
     if (groups.length === 1) sharePrayerTo(groups[0], p);
     else setPendingPrayer(p);
   };
@@ -39,8 +39,8 @@ export default function PrayerScreen() {
     try {
       const post = await addPost(group.id, { author: profile.name, type: 'prayer', text: p.text });
       setPrayerShared(p.id, post.id);
-      Alert.alert('Shared', `Your prayer request was posted to ${group.name}.`);
-    } catch (_) { Alert.alert('Couldn’t share', 'Check your connection and try again.'); }
+      notify('Shared', `Your prayer request was posted to ${group.name}.`);
+    } catch (_) { notify('Couldn’t share', 'Check your connection and try again.'); }
     finally { setSharingId(null); }
   };
 
@@ -119,7 +119,7 @@ export default function PrayerScreen() {
                   confirmText: 'Remove',
                   onConfirm: async () => {
                     try { await deletePrayer(item.id); }
-                    catch (_) { Alert.alert('Couldn’t remove', 'The shared copies could not be removed. Nothing was deleted locally.'); }
+                    catch (_) { notify('Couldn’t remove', 'The shared copies could not be removed. Nothing was deleted locally.'); }
                   },
                 })}
                 hitSlop={8}
