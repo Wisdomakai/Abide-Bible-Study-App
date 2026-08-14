@@ -19,7 +19,7 @@ npm run android:build
 ```
 
 The command builds the PWA, synchronizes it into the native project, signs the
-release, and writes `Ardent-Bible-Study-v1.3.1.apk` both at the
+release, and writes `Ardent-Bible-Study-v1.3.2.apk` both at the
 repository root and under `public/downloads/`. The release key and password are
 stored only under the ignored `.android-tools/` directory. Back up both
 `.android-tools/ardent-release.jks` and `.android-tools/signing.json` securely;
