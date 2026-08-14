@@ -15,7 +15,8 @@ This repository implements the technical controls below, but the service operato
 
 ## Operator sign-off required
 
-- Put the legal operator name, jurisdiction, working privacy contact, and hosted policy URL in `store/privacy.html`.
+- Put the legal operator name, jurisdiction, and a working privacy contact in `public/privacy.html`
+  (published at https://ardent-study.vercel.app/privacy.html).
 - Define documented retention periods for activity records and server backups; configure deletion accordingly.
 - Execute and retain the Supabase data-processing agreement and verify the selected hosting region.
 - Decide the lawful basis and age policy for the intended countries; obtain qualified legal review where required.

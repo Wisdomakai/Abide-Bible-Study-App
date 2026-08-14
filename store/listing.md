@@ -35,7 +35,8 @@ Made with love for Bible study groups.
 - Phone screenshots: 2–8 images, min 320px, 16:9 or 9:16.
   Capture these on your phone (in the app): Launch, Today (verse), Group feed,
   Prayer, Settings. (Power + Volume-Down on Android to screenshot.)
-- Privacy policy URL: host `store/privacy.html` (see PLAYSTORE.md) and paste the URL.
+- Privacy policy URL: https://ardent-study.vercel.app/privacy.html — served from
+  `public/privacy.html`, so it deploys with the app and needs no separate hosting.
 
 ## Data safety form answers (Play Console → App content → Data safety)
 - Does your app collect or share user data? **Yes**
