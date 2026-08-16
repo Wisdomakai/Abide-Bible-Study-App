@@ -48,6 +48,19 @@
         box-shadow: 0 0 0 3px rgba(75, 63, 158, 0.16);
         border-color: #4B3F9E !important;
       }
+      /* Some fields are a bordered row wrapping an icon and a bare input (tag,
+         search, reflection, prayer). The border lives on the wrapper, so the
+         ring has to move there too — otherwise those fields behave differently
+         from the ones where the input is the field. */
+      [data-fieldbox]:focus-within {
+        box-shadow: 0 0 0 3px rgba(75, 63, 158, 0.16);
+        border-color: #4B3F9E !important;
+      }
+      [data-fieldbox] input:focus,
+      [data-fieldbox] textarea:focus {
+        box-shadow: none;
+        border-color: transparent !important;
+      }
       /* Android WebView paints a grey flash on every tap. */
       * { -webkit-tap-highlight-color: transparent; }
     </style>

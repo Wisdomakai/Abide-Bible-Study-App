@@ -124,7 +124,7 @@ export default function TodayScreen({ navigation }) {
 
         {/* Reflection */}
         <Text style={styles.prompt}>What is God saying to you through this?</Text>
-        <View style={styles.editor}>
+        <View style={styles.editor} dataSet={{ fieldbox: '1' }}>
           <TextInput
             value={text}
             onChangeText={setText}

@@ -132,7 +132,7 @@ export default function NoteEditorScreen({ route, navigation }) {
         placeholderTextColor={colors.faint}
         style={styles.title}
       />
-      <View style={styles.tagRow}>
+      <View style={styles.tagRow} dataSet={{ fieldbox: '1' }}>
         <Ionicons name="pricetag-outline" size={16} color={colors.muted} />
         <TextInput
           value={tag}

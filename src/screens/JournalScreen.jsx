@@ -71,7 +71,7 @@ export default function JournalScreen({ navigation }) {
       </View>
 
       {(showingNotes ? notes.length : marks.length) > 0 && (
-        <View style={styles.searchWrap}>
+        <View style={styles.searchWrap} dataSet={{ fieldbox: '1' }}>
           <Ionicons name="search" size={18} color={colors.faint} />
           <TextInput
             value={query}

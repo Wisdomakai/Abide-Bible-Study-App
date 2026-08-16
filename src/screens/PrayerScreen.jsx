@@ -51,7 +51,7 @@ export default function PrayerScreen() {
         <Text style={styles.sub}>Bring your requests, remember His faithfulness</Text>
       </View>
 
-      <View style={styles.composer}>
+      <View style={styles.composer} dataSet={{ fieldbox: '1' }}>
         <TextInput
           value={draft}
           onChangeText={setDraft}
