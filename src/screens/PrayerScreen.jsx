@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
     marginHorizontal: spacing.xl, marginBottom: spacing.lg,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
     borderRadius: radius.md, padding: spacing.md, ...shadow.card,
   },
   composerInput: { flex: 1, fontFamily: fonts.body, fontSize: 15, color: colors.text, minHeight: 40, maxHeight: 120, paddingTop: 8 },

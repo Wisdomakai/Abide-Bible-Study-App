@@ -6,9 +6,9 @@ import { addPost } from '../data/api';
 import GroupChooser from '../components/GroupChooser';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
-import { confirmDestructive, notify } from '../components/ui';
+import { confirmDestructive, notify, HeaderButton, ActionButton } from '../components/ui';
 import { deleteVoiceIfUnreferenced, signedVoiceUrl, uploadVoice } from '../data/voice';
-import { colors, fonts, spacing, radius } from '../theme';
+import { colors, fonts, spacing, radius, field } from '../theme';
 
 export default function NoteEditorScreen({ route, navigation }) {
   const { id, prefill } = route.params || {}; // prefill: passage sent from the Bible reader
@@ -63,11 +63,7 @@ export default function NoteEditorScreen({ route, navigation }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <Pressable onPress={save} hitSlop={10} style={({ pressed }) => pressed && { opacity: 0.6 }}>
-          <Text style={styles.saveBtn}>Save</Text>
-        </Pressable>
-      ),
+      headerRight: () => <HeaderButton title="Save" onPress={save} />,
     });
   });
 
@@ -175,16 +171,13 @@ export default function NoteEditorScreen({ route, navigation }) {
       </View>
 
       <View style={styles.footerRow}>
-        <Pressable onPress={onShare} disabled={sharing} style={({ pressed }) => [styles.footBtn, sharing && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}>
-          <Ionicons name="people-outline" size={18} color={colors.primary} />
-          <Text style={styles.footBtnText}>{sharing ? 'Sharing…' : 'Share with group'}</Text>
-        </Pressable>
-        {existing ? (
-          <Pressable onPress={confirmDelete} style={({ pressed }) => [styles.footBtn, pressed && { opacity: 0.7 }]}>
-            <Ionicons name="trash-outline" size={18} color={colors.danger} />
-            <Text style={[styles.footBtnText, { color: colors.danger }]}>Delete</Text>
-          </Pressable>
-        ) : null}
+        <ActionButton
+          icon="people-outline"
+          label={sharing ? 'Sharing…' : 'Share with group'}
+          onPress={sharing ? undefined : onShare}
+          style={sharing && { opacity: 0.5 }}
+        />
+        {existing ? <ActionButton icon="trash-outline" label="Delete" tone="danger" onPress={confirmDelete} /> : null}
       </View>
 
       <GroupChooser
@@ -201,18 +194,19 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.xl, paddingBottom: spacing.xxl },
   saveBtn: { fontFamily: fonts.bodySemi, fontSize: 16, color: colors.primary },
-  title: { fontFamily: fonts.serifBold, fontSize: 26, color: colors.text, paddingVertical: spacing.sm },
+  title: { ...field.base, fontFamily: fonts.serifBold, fontSize: 22, color: colors.text, marginBottom: spacing.md },
   tagRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: spacing.md, marginBottom: spacing.lg,
+    ...field.base, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg,
   },
   tag: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
-  body: { fontFamily: fonts.body, fontSize: 17, lineHeight: 27, color: colors.text, minHeight: 240 },
+  body: {
+    ...field.base, fontFamily: fonts.body, fontSize: 17, lineHeight: 27, color: colors.text, minHeight: 240,
+  },
   voiceSection: { marginTop: spacing.xl, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
   voiceAdd: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   voiceHas: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   voiceLabel: { flex: 1, fontFamily: fonts.body, fontSize: 14, color: colors.muted },
-  footerRow: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.xl },
+  footerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xl },
   footBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   footBtnText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
 });

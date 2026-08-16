@@ -44,6 +44,21 @@ export const fonts = {
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 export const radius = { sm: 10, md: 16, lg: 22, pill: 999 };
 
+// One look for every text field. Before this, most inputs had no boundary at
+// all and the only sign you were typing in one was the browser's own focus
+// ring, which differs between Chrome, Safari and the Android WebView.
+export const field = {
+  base: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  focusColor: colors.primary,
+};
+
 export const shadow = {
   card: {
     shadowColor: '#3B2F6E',

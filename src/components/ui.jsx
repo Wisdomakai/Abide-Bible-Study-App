@@ -144,6 +144,55 @@ export function confirmDestructive({ title, message, confirmText = 'Delete', onC
   ]);
 }
 
+// Header actions used to be bare text pinned to the screen edge, so they were
+// clipped on narrow screens and never read as tappable. This keeps them inside
+// the safe edge and gives them a button shape.
+export function HeaderButton({ title, onPress, tone = 'primary', disabled }) {
+  const solid = tone === 'primary';
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      hitSlop={8}
+      style={({ pressed }) => [
+        styles.headerBtn,
+        solid ? styles.headerBtnSolid : styles.headerBtnGhost,
+        disabled && { opacity: 0.5 },
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <Text style={[styles.headerBtnText, solid && { color: colors.white }]}>{title}</Text>
+    </Pressable>
+  );
+}
+
+// Row actions (Write a note, Remove, Share with group…) were icon + coloured
+// text, indistinguishable from labels. Given an outline and a tap target they
+// read as controls.
+export function ActionButton({ icon, label, onPress, tone = 'primary', style }) {
+  const danger = tone === 'danger';
+  const color = danger ? colors.danger : colors.primary;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.actionBtn,
+        { borderColor: danger ? '#E7C4BA' : colors.border },
+        danger && { backgroundColor: '#FCF1EE' },
+        pressed && { opacity: 0.7 },
+        style,
+      ]}
+    >
+      {icon ? <Ionicons name={icon} size={16} color={color} /> : null}
+      <Text style={[styles.actionBtnText, { color }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 // react-native-web's Alert.alert is an empty function, so every Alert.alert in
 // this app was silently discarded — failures looked like the button doing
 // nothing at all. Route messages through window.alert on web, the same way
@@ -171,6 +220,19 @@ export function timeAgo(ts) {
 }
 
 const styles = StyleSheet.create({
+  headerBtn: {
+    paddingHorizontal: 14, height: 34, borderRadius: radius.pill,
+    alignItems: 'center', justifyContent: 'center', marginRight: spacing.md,
+  },
+  headerBtnSolid: { backgroundColor: colors.primary },
+  headerBtnGhost: { backgroundColor: colors.primarySoft },
+  headerBtnText: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.primary },
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, height: 36, borderRadius: radius.pill,
+    borderWidth: 1, backgroundColor: colors.surface,
+  },
+  actionBtnText: { fontFamily: fonts.bodySemi, fontSize: 13 },
   inlineLink: { color: colors.primary, textDecorationLine: 'underline' },
   mention: { color: colors.primary, backgroundColor: colors.primarySoft, fontFamily: fonts.bodySemi },
   linkCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md, padding: spacing.md, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },

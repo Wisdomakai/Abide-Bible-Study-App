@@ -3,7 +3,7 @@ import { View, Text, TextInput, FlatList, Pressable, StyleSheet } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '../components/Icon';
 import { useApp } from '../data/AppContext';
-import { Card, Pill, EmptyState, confirmDestructive, timeAgo } from '../components/ui';
+import { Card, Pill, EmptyState, confirmDestructive, timeAgo, ActionButton } from '../components/ui';
 import { colors, fonts, spacing, radius, shadow, penFor } from '../theme';
 
 export default function JournalScreen({ navigation }) {
@@ -140,14 +140,8 @@ export default function JournalScreen({ navigation }) {
                   {item.text}
                 </Text>
                 <View style={styles.markActions}>
-                  <Pressable onPress={() => noteFromHighlight(item)} style={({ pressed }) => [styles.markBtn, pressed && { opacity: 0.7 }]}>
-                    <Ionicons name="create-outline" size={16} color={colors.primary} />
-                    <Text style={styles.markBtnText}>Write a note</Text>
-                  </Pressable>
-                  <Pressable onPress={() => confirmRemove(item)} style={({ pressed }) => [styles.markBtn, pressed && { opacity: 0.7 }]}>
-                    <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                    <Text style={[styles.markBtnText, { color: colors.danger }]}>Remove</Text>
-                  </Pressable>
+                  <ActionButton icon="create-outline" label="Write a note" onPress={() => noteFromHighlight(item)} />
+                  <ActionButton icon="trash-outline" label="Remove" tone="danger" onPress={() => confirmRemove(item)} />
                 </View>
               </View>
             </Card>
@@ -186,7 +180,7 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     marginHorizontal: spacing.xl, marginBottom: spacing.md,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
     borderRadius: radius.pill, paddingHorizontal: spacing.lg, height: 46,
   },
   search: { flex: 1, fontFamily: fonts.body, fontSize: 15, color: colors.text },
@@ -205,7 +199,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif, fontSize: 15, lineHeight: 25, color: colors.text,
     marginTop: spacing.sm, paddingHorizontal: 4, borderRadius: radius.sm,
   },
-  markActions: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.md },
+  markActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   markBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   markBtnText: { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.primary },
   fab: {

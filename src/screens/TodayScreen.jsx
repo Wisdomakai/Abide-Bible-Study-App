@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   transTextOn: { color: colors.primary },
   prompt: { fontFamily: fonts.serifBold, fontSize: 18, color: colors.text, marginBottom: spacing.md },
   editor: {
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
     borderRadius: radius.md, padding: spacing.lg, minHeight: 150, ...shadow.card,
   },
   input: { fontFamily: fonts.body, fontSize: 16, lineHeight: 25, color: colors.text, minHeight: 120 },

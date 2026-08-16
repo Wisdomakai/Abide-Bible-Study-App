@@ -39,6 +39,17 @@
       * { box-sizing: border-box; }
       button, input, textarea { font: inherit; }
       input, textarea { font-size: 16px !important; }
+      /* Each browser and the Android WebView drew its own focus box around text
+         fields, which is the stray highlight users saw. Replace it with one
+         branded ring so focus stays obvious and consistent everywhere. */
+      input, textarea, select, [contenteditable] { outline: none; }
+      input:focus, textarea:focus, select:focus, [contenteditable]:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(75, 63, 158, 0.16);
+        border-color: #4B3F9E !important;
+      }
+      /* Android WebView paints a grey flash on every tap. */
+      * { -webkit-tap-highlight-color: transparent; }
     </style>
   </head>
   <body>
