@@ -26,6 +26,11 @@ export default function BibleScreen({ navigation }) {
   const [error, setError] = useState(false);
   const [pickerBook, setPickerBook] = useState(null); // book object whose chapters are shown
   const [picking, setPicking] = useState(false);
+  const [pickerChapter, setPickerChapter] = useState(null); // chapter chosen inside the picker
+  const [pickerVerses, setPickerVerses] = useState([]);     // its verse numbers, once fetched
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [jumpTo, setJumpTo] = useState(null);               // verse to scroll to after opening
+  const [flash, setFlash] = useState(null);                 // briefly marks the verse jumped to
   const [selected, setSelected] = useState([]); // verse numbers awaiting a colour
   const scrollRef = useRef(null);
   const requestId = useRef(0);
@@ -74,7 +79,10 @@ export default function BibleScreen({ navigation }) {
   }, []);
 
   const load = useCallback(async () => {
-    setLoading(true); setError(false);
+    // Drop the previous chapter first. Keeping it meant a pending verse jump
+    // fired against the old text and scrolled to the wrong place before the new
+    // chapter had loaded.
+    setLoading(true); setError(false); setData(null);
     const id = ++requestId.current;
     try {
       const d = await fetchChapter(book, chapter, translation);
@@ -88,6 +96,30 @@ export default function BibleScreen({ navigation }) {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { saveJSON(KEYS.biblePos, { book, chapter }); setSelected([]); }, [book, chapter]);
 
+  // Verses render inline inside one flowing paragraph, so there is no per-verse
+  // layout to measure. Each carries a data-verse attribute instead, which the
+  // DOM can scroll to directly — the app runs on react-native-web everywhere,
+  // web and Android alike.
+  useEffect(() => {
+    if (!jumpTo || loading || !data) return undefined;
+    const timer = setTimeout(() => {
+      const node = typeof document !== 'undefined' && document.querySelector(`[data-verse="${jumpTo}"]`);
+      // Positioned instantly rather than smooth-scrolled: opening at a verse
+      // should land there, and smooth behaviour silently does nothing when the
+      // view is not actively rendering.
+      if (node?.scrollIntoView) node.scrollIntoView({ block: 'center' });
+      setFlash(jumpTo);
+      setJumpTo(null);
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [jumpTo, loading, data]);
+
+  useEffect(() => {
+    if (flash == null) return undefined;
+    const timer = setTimeout(() => setFlash(null), 1800);
+    return () => clearTimeout(timer);
+  }, [flash]);
+
   const go = (delta) => {
     const idx = BOOKS.findIndex((b) => b.name === book);
     let c = chapter + delta;
@@ -96,8 +128,32 @@ export default function BibleScreen({ navigation }) {
     setChapter(c);
   };
 
-  const openBook = (b) => setPickerBook(b);
-  const chooseChapter = (c) => { setBook(pickerBook.name); setChapter(c); setPicking(false); setPickerBook(null); };
+  const openBook = (b) => { setPickerBook(b); setPickerChapter(null); setPickerVerses([]); };
+
+  // Picking a chapter now lists its verses rather than opening straight away,
+  // so a passage can be opened at the verse you actually want.
+  const chooseChapter = async (c) => {
+    setPickerChapter(c);
+    setPickerLoading(true);
+    try {
+      const d = await fetchChapter(pickerBook.name, c, translation);
+      setPickerVerses((d.verses || []).map((v) => v.verse));
+    } catch (_) {
+      setPickerVerses([]); // offline or failed — "Whole chapter" still works
+    } finally {
+      setPickerLoading(false);
+    }
+  };
+
+  const openAt = (verse) => {
+    setBook(pickerBook.name);
+    setChapter(pickerChapter);
+    setPicking(false);
+    setPickerBook(null);
+    setPickerChapter(null);
+    setPickerVerses([]);
+    setJumpTo(verse);
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -135,8 +191,10 @@ export default function BibleScreen({ navigation }) {
                 <Text
                   key={v.verse}
                   onPress={() => toggleVerse(v.verse)}
+                  dataSet={{ verse: v.verse }}
                   style={[
                     mark && { backgroundColor: penFor(mark.color).bg },
+                    flash === v.verse && styles.vFlash,
                     isSelected && styles.vSelected,
                   ]}
                   accessibilityRole="button"
@@ -194,18 +252,17 @@ export default function BibleScreen({ navigation }) {
       <Modal visible={picking} animationType="slide" onRequestClose={() => setPicking(false)}>
         <SafeAreaView style={styles.safe} edges={['top']}>
           <View style={styles.pickerHead}>
-            {pickerBook ? (
-              <Text style={styles.pickerTitle}>{pickerBook.name}</Text>
-            ) : (
-              <Text style={styles.pickerTitle}>Choose a book</Text>
-            )}
+            <Text style={styles.pickerTitle}>
+              {!pickerBook ? 'Choose a book' : pickerChapter ? `${pickerBook.name} ${pickerChapter}` : pickerBook.name}
+            </Text>
             <Pressable onPress={() => setPicking(false)} hitSlop={8}><Ionicons name="close" size={24} color={colors.muted} /></Pressable>
           </View>
-          {!pickerBook ? null : (
+          {!pickerBook || pickerChapter ? null : (
             <View style={styles.chapWrap}>
               <Pressable onPress={() => setPickerBook(null)} style={styles.backRow}>
                 <Ionicons name="chevron-back" size={18} color={colors.primary} /><Text style={styles.backText}>All books</Text>
               </Pressable>
+              <Text style={styles.pickerHint}>Choose a chapter</Text>
               <ScrollView contentContainerStyle={styles.chapGrid}>
                 {Array.from({ length: pickerBook.chapters }, (_, i) => i + 1).map((c) => (
                   <Pressable key={c} onPress={() => chooseChapter(c)} style={styles.chapCell}>
@@ -215,6 +272,31 @@ export default function BibleScreen({ navigation }) {
               </ScrollView>
             </View>
           )}
+
+          {pickerBook && pickerChapter ? (
+            <View style={styles.chapWrap}>
+              <Pressable onPress={() => { setPickerChapter(null); setPickerVerses([]); }} style={styles.backRow}>
+                <Ionicons name="chevron-back" size={18} color={colors.primary} />
+                <Text style={styles.backText}>Chapters</Text>
+              </Pressable>
+              <Pressable onPress={() => openAt(null)} style={({ pressed }) => [styles.wholeChapter, pressed && { opacity: 0.85 }]}>
+                <Ionicons name="book-outline" size={17} color={colors.white} />
+                <Text style={styles.wholeChapterText}>Read the whole chapter</Text>
+              </Pressable>
+              <Text style={styles.pickerHint}>Or open at a verse</Text>
+              {pickerLoading ? (
+                <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
+              ) : (
+                <ScrollView contentContainerStyle={styles.chapGrid}>
+                  {pickerVerses.map((v) => (
+                    <Pressable key={v} onPress={() => openAt(v)} style={styles.chapCell}>
+                      <Text style={styles.chapNum}>{v}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          ) : null}
           {pickerBook ? null : (
             <FlatList
               data={BOOKS}
@@ -260,6 +342,14 @@ const styles = StyleSheet.create({
   passage: { fontFamily: fonts.serif, fontSize: 18, lineHeight: 31, color: colors.text },
   vnum: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.accent },
   vSelected: { textDecorationLine: 'underline', textDecorationColor: colors.primary },
+  vFlash: { backgroundColor: colors.primarySoft },
+  pickerHint: { fontFamily: fonts.bodySemi, fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6, paddingHorizontal: spacing.xl, marginBottom: spacing.sm },
+  wholeChapter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    marginHorizontal: spacing.xl, marginBottom: spacing.lg, height: 46,
+    borderRadius: radius.pill, backgroundColor: colors.primary,
+  },
+  wholeChapterText: { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.white },
   tools: {
     borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface,
     paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.md, gap: spacing.md,
