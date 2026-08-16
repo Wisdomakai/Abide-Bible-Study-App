@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, Pressable, ScrollView, StyleSheet, Share } from 'react-native';
 import { Ionicons } from '../components/Icon';
 import { useApp } from '../data/AppContext';
+import { isNativeApp } from '../data/native';
 import { loadReminder, setReminder } from '../data/notifications';
 import { webPushSupported, webPushStatus, subscribeWebPush } from '../data/webPush';
 import { backendMode } from '../data/api';
@@ -121,7 +122,11 @@ export default function SettingsScreen({ navigation }) {
           <SectionTitle style={{ marginTop: spacing.xl }}>Group notifications</SectionTitle>
           <Card>
             <Text style={styles.label}>Get notified of new group posts</Text>
-            <Text style={styles.sub}>Shows phone alerts from the installed PWA, even while Ardent is closed.</Text>
+            <Text style={styles.sub}>
+              {isNativeApp
+                ? 'Shows new group posts on the bell while Ardent is open. Alerts when the app is closed are not available in the Android app yet.'
+                : 'Shows phone alerts from the installed PWA, even while Ardent is closed.'}
+            </Text>
             <Pressable onPress={enableWeb} style={({ pressed }) => [styles.shareBtn, { marginTop: spacing.lg, alignSelf: 'flex-start' }, pressed && { opacity: 0.85 }]}>
               <Ionicons name="notifications-outline" size={17} color={colors.white} />
               <Text style={styles.shareText}>{webState === 'granted' ? 'Enabled ✓' : 'Enable notifications'}</Text>
