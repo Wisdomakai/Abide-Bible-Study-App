@@ -19,7 +19,8 @@ The Android package ID is `com.ardentbiblestudy.app`. It targets API 36
 Capacitor 8 needs **JDK 21** exactly: its plugins request a Java 21 toolchain,
 so Android Studio's bundled JDK 25 is not enough. The build script uses
 `JAVA_HOME` if set, otherwise the newest `jdk-21*` folder under the ignored
-`.android-tools/jdk/` (Eclipse Temurin 21 for macOS, unpacked there).
+`.android-tools/jdk/` (Amazon Corretto 21 for macOS, unpacked and renamed
+to `jdk-21-corretto`; any OpenJDK 21 build works).
 
 ```bash
 npm run android:build

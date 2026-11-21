@@ -17,7 +17,7 @@ const baseName = `Ardent-Bible-Study-v${versionName}`;
 
 // Capacitor 8 plugins request a JDK 21 toolchain specifically, so a newer JDK
 // alone (such as Android Studio's bundled 25) is not enough. Prefer JAVA_HOME,
-// then the Temurin 21 kept under the ignored .android-tools/jdk/.
+// then the JDK 21 kept under the ignored .android-tools/jdk/.
 const jdkDir = path.join(toolsDir, 'jdk');
 const bundled21 = existsSync(jdkDir)
   ? (await fs.readdir(jdkDir)).filter((name) => name.startsWith('jdk-21')).sort().pop()
@@ -26,7 +26,7 @@ const javaHome = [
   process.env.JAVA_HOME,
   bundled21 && path.join(jdkDir, bundled21, 'Contents', 'Home'),
 ].find((dir) => dir && existsSync(path.join(dir, 'bin', 'java')));
-if (!javaHome) throw new Error('No JDK 21 found. Unpack Temurin 21 into .android-tools/jdk/ or set JAVA_HOME.');
+if (!javaHome) throw new Error('No JDK 21 found. Unpack a JDK 21 into .android-tools/jdk/jdk-21* or set JAVA_HOME.');
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
