@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -45,4 +46,8 @@
          manifest does not declare, so without this the mic prompt never appeared and
          voice notes failed with no visible error. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Added by @capacitor/local-notifications. Google Play restricts exact
+         alarms to alarm-clock and calendar apps; the daily reminder is
+         scheduled inexactly instead (isExactNotification: false). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
 </manifest>

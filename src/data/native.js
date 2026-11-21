@@ -114,6 +114,10 @@ export async function setNativeDailyReminder({ enabled, hour, minute }) {
         allowWhileIdle: true,
       },
       autoCancel: true,
+      // A daily nudge does not need to fire to the second. Exact alarms need a
+      // permission Google Play reserves for alarm and calendar apps, so the
+      // manifest drops it and the reminder is scheduled inexactly.
+      isExactNotification: false,
       extra: { destination: 'today' },
     }],
   });
