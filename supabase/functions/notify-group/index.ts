@@ -34,7 +34,13 @@ Deno.serve(async (req) => {
 
     const { data: members } = await supabase
       .from('memberships').select('user_id').eq('group_id', post.group_id);
-    const otherIds = (members ?? []).map((m) => m.user_id).filter((id) => id !== post.author_id);
+    // Members who blocked the author are not notified (user_blocks arrives with
+    // moderation.sql; before that the query fails and nobody is filtered).
+    const { data: blocks } = await supabase
+      .from('user_blocks').select('blocker_id').eq('blocked_id', post.author_id);
+    const blockedBy = new Set((blocks ?? []).map((b) => b.blocker_id));
+    const otherIds = (members ?? []).map((m) => m.user_id)
+      .filter((id) => id !== post.author_id && !blockedBy.has(id));
     if (otherIds.length === 0) return new Response('no recipients', { status: 200 });
 
     const label = post.type === 'prayer' ? 'shared a prayer request'

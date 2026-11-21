@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authorization } },
   });
   const { data: { user }, error: authError } = await caller.auth.getUser();
-  if (authError || !user || user.is_anonymous) return json({ error: 'Unauthorized' }, 401);
+  // Guests (anonymous accounts) are real users and are counted too.
+  if (authError || !user) return json({ error: 'Unauthorized' }, 401);
 
   // Prefer a real country header if the platform ever starts sending one;
   // otherwise resolve it from the caller's timezone.

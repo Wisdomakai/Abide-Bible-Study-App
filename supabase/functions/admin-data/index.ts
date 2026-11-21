@@ -30,6 +30,28 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
+  // Resolving a report: remove the post (and its voice file) or dismiss it.
+  // Every open report for the same post is closed together.
+  const body = await req.json().catch(() => ({}));
+  if (body?.action === 'resolve_report') {
+    const { reportId, remove } = body;
+    const { data: report } = await supabase.from('post_reports').select('post_id').eq('id', reportId).maybeSingle();
+    if (!report) {
+      return new Response(JSON.stringify({ error: 'Report not found' }), {
+        status: 404, headers: { ...cors, 'Content-Type': 'application/json' },
+      });
+    }
+    if (remove && report.post_id) {
+      const { data: post } = await supabase.from('posts').select('audio_url').eq('id', report.post_id).maybeSingle();
+      await supabase.from('posts').delete().eq('id', report.post_id);
+      if (post?.audio_url) await supabase.storage.from('voice').remove([post.audio_url]).catch(() => {});
+    }
+    const resolved = { status: remove ? 'removed' : 'dismissed', resolved_at: new Date().toISOString() };
+    await supabase.from('post_reports').update(resolved).eq('id', reportId);
+    if (report.post_id) await supabase.from('post_reports').update(resolved).eq('post_id', report.post_id).eq('status', 'open');
+    return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, 'Content-Type': 'application/json' } });
+  }
+
   // logins table may not exist yet (admin.sql not run) — tolerate that. The
   // country column arrives with country-tracking.sql, so it may be absent too;
   // a wide window feeds the country totals while the table shows the newest.
@@ -40,13 +62,20 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: false }).limit(2000)
       .then((r) => r.data ?? []).catch(() => []));
 
-  const [{ data: profiles }, { data: memberships }, { data: groups }, { data: posts }, logins] =
+  // post_reports arrives with moderation.sql, so it may not exist yet.
+  const reportsQuery = supabase.from('post_reports')
+    .select('id, post_id, group_id, reported_name, post_type, post_snapshot, reason, details, status, created_at')
+    .order('created_at', { ascending: false }).limit(200)
+    .then((r) => r.data ?? []).catch(() => []);
+
+  const [{ data: profiles }, { data: memberships }, { data: groups }, { data: posts }, logins, reports] =
     await Promise.all([
       supabase.from('profiles').select('*'),
       supabase.from('memberships').select('group_id, user_id, created_at'),
       supabase.from('groups').select('id, name, code'),
       supabase.from('posts').select('id, group_id, author_id, author_name, type, created_at'),
       loginsQuery,
+      reportsQuery,
     ]);
 
   const groupsById = new Map((groups ?? []).map((g) => [g.id, g]));
@@ -123,9 +152,11 @@ Deno.serve(async (req) => {
     posts: (posts ?? []).length,
     loginsToday: (logins ?? []).filter((l) => now - t(l.created_at) < DAY).length,
     countries: countries.length,
+    openReports: (reports ?? []).filter((r) => r.status === 'open').length,
   };
+  const reportList = (reports ?? []).map((r) => ({ ...r, groupName: groupsById.get(r.group_id)?.name ?? '—' }));
 
-  return new Response(JSON.stringify({ stats, users, groups: groupList, countries, logins: (logins ?? []).slice(0, 150) }), {
+  return new Response(JSON.stringify({ stats, users, groups: groupList, countries, reports: reportList, logins: (logins ?? []).slice(0, 150) }), {
     headers: { ...cors, 'Content-Type': 'application/json' },
   });
 });

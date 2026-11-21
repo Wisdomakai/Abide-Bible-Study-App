@@ -73,7 +73,7 @@ function Tabs() {
 }
 
 function Root() {
-  const { ready, authReady, authUser, profile, groups, selectGroup, notificationAlert, dismissNotificationAlert } = useApp();
+  const { ready, authReady, authUser, passwordRecovery, profile, groups, selectGroup, notificationAlert, dismissNotificationAlert } = useApp();
   const [launching, setLaunching] = React.useState(true);
   const insets = useSafeAreaInsets();
 
@@ -95,7 +95,7 @@ function Root() {
 
   // Branded launch screen on every cold start (and until data is loaded).
   if (launching || !ready || !authReady) return <LaunchScreen />;
-  if (!authUser || authUser.is_anonymous) return <AuthScreen />;
+  if (!authUser || passwordRecovery) return <AuthScreen />;
   if (!profile?.name) return <OnboardingScreen />;
 
   return (

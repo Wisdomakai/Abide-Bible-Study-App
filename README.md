@@ -22,7 +22,7 @@ The production output is `dist/`. It contains an installable manifest and a gene
 
 ## Backend setup
 
-Follow [BACKEND.md](BACKEND.md). Email magic-link authentication must be enabled so the same private journal can be used on multiple devices. Anonymous authentication is no longer used for new sessions.
+Follow [BACKEND.md](BACKEND.md). People start as guests (anonymous Supabase accounts with just a display name) and can save the account later with an email and password; Google sign-in is also offered. Anonymous, Email, and Google providers must all be enabled.
 
 Before a public launch, complete the operator-owned items in [COMPLIANCE.md](COMPLIANCE.md); the repository cannot supply a legal entity, privacy contact, retention policy, or jurisdiction on the operator's behalf.
 

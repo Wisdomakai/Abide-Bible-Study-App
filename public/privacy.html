@@ -12,7 +12,7 @@
 </head>
 <body>
   <h1>Privacy Policy — Ardent</h1>
-  <p class="muted">Last updated: 14 August 2026</p>
+  <p class="muted">Last updated: 21 November 2026 (guest accounts added)</p>
 
   <p>Ardent ("the app", "we", "us") is a journaling app for Bible study groups. This policy
   explains what information the app handles and how. By using Ardent you agree to this policy.</p>
@@ -27,11 +27,16 @@
 
   <h2>Information we handle</h2>
   <ul>
-    <li><strong>Your email and name</strong> — used for secure passwordless sign-in, journal sync, and identifying posts you choose to share.</li>
+    <li><strong>Your name</strong> — the display name you choose. If you start as a guest, this is the only personal detail we hold; no email or password is needed.</li>
+    <li><strong>Your email</strong> (optional for guests) — the email you add to save your account or create it with, or that Google provides if you continue with Google. Used for sign-in, journal sync, account emails (confirmation and password reset), and identifying posts you choose to share. Passwords are stored only as a secure hash by our authentication provider; we never see your Google password.</li>
     <li><strong>Personal journal, reflections, notes, and prayers</strong> — encrypted in transit and stored in your private Supabase account row so they remain available across your devices.</li>
     <li><strong>Group posts</strong> — reflections, notes, and prayers you choose to share, plus "Amen" reactions, are stored on our server so your group members can see them.</li>
     <li><strong>Voice recordings</strong> — recordings you add are stored in a private bucket. Group members receive temporary signed access only when you share the recording in their group.</li>
     <li><strong>Web Push subscription and reminder preferences</strong> — stored only after you explicitly enable notifications, including your browser push endpoint, timezone, and chosen reminder time.</li>
+    <li><strong>Reports and blocks</strong> — if you report a group post, we store the reason, a copy of
+      the reported post, and who reported it so an administrator can review it; the person you
+      report is never told who reported them. If you block a member, we store that choice so their
+      posts stay hidden from you.</li>
     <li><strong>Account activity</strong> — recent sign-in/presence times are retained for security and aggregate service administration.</li>
     <li><strong>Country of sign-in</strong> — when you sign in, our server records a two-letter
       country code (for example <em>GH</em> or <em>US</em>), at most once every 30 minutes. It is
@@ -63,6 +68,18 @@
   includes a self-service “Delete account and data” action that permanently deletes the account,
   journal, memberships, posts, reactions, subscriptions, owned voice files, and your sign-in
   history including the recorded country codes.</p>
+
+  <h2 id="delete-account">Deleting your account</h2>
+  <p>Guest accounts that are never saved with an email cannot be recovered once you sign out,
+  and you can delete them in the app at any time as described below.</p>
+  <p>In the app: open <strong>Settings</strong> and tap <strong>Delete account and data</strong>.
+  Deletion is immediate and permanent and covers everything listed under “Data retention &amp;
+  deletion” above.</p>
+  <p>Without the app: email
+  <a href="mailto:ardentbelieversoutreachaccra@gmail.com?subject=Delete%20my%20Ardent%20account">ardentbelieversoutreachaccra@gmail.com</a>
+  from the email address on your account with the subject “Delete my Ardent account”. We
+  delete the account and all its data within 30 days and confirm by email. Copies of reports you
+  made about other people's posts are deleted with your account.</p>
 
   <h2>Children</h2>
   <p>Ardent is intended for general audiences and is not directed at children under 13.</p>

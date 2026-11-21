@@ -3,7 +3,8 @@ import { View, Text, TextInput, FlatList, Pressable, StyleSheet, Modal, Keyboard
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '../components/Icon';
 import { useApp } from '../data/AppContext';
-import { getFeed, getGroupMembers, addPost, toggleAmen, deletePost, subscribe } from '../data/api';
+import { getFeed, getGroupMembers, addPost, toggleAmen, deletePost, subscribe, reportPost, blockUser, getBlockedUsers } from '../data/api';
+import { openExternalUrl } from '../data/native';
 import { Pill, EmptyState, timeAgo, LinkText, LinkPreview, confirmDestructive, notify } from '../components/ui';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
@@ -16,6 +17,16 @@ const TYPE_META = {
   note: { label: 'Note', tone: 'muted', icon: 'create-outline' },
   voice: { label: 'Voice', tone: 'primary', icon: 'mic-outline' },
 };
+const REPORT_REASONS = [
+  { key: 'spam', label: 'Spam or advertising' },
+  { key: 'harassment', label: 'Harassment or bullying' },
+  { key: 'hateful', label: 'Hateful or abusive language' },
+  { key: 'sexual', label: 'Sexual content' },
+  { key: 'violence', label: 'Violence or threats' },
+  { key: 'other', label: 'Something else' },
+];
+const COMMUNITY_URL = 'https://ardent-study.vercel.app/community.html';
+const openCommunity = () => openExternalUrl(COMMUNITY_URL).catch(() => window.open?.(COMMUNITY_URL, '_blank'));
 const initials = (name) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
 export default function GroupScreen({ navigation }) {
@@ -26,6 +37,13 @@ export default function GroupScreen({ navigation }) {
   const [sending, setSending] = useState(false);
   const [members, setMembers] = useState([]);
   const [membersVisible, setMembersVisible] = useState(false);
+  // Post whose Report/Block menu is open; `reporting` swaps the menu for reasons.
+  const [actionPost, setActionPost] = useState(null);
+  const [reporting, setReporting] = useState(false);
+  // Report/Block only appear once moderation.sql is in the database; reading
+  // the block list fails until then.
+  const [moderationReady, setModerationReady] = useState(false);
+  useEffect(() => { getBlockedUsers().then(() => setModerationReady(true)).catch(() => {}); }, []);
   const requestId = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -105,6 +123,32 @@ export default function GroupScreen({ navigation }) {
         const before = feed;
         setFeed((f) => f.filter((p) => p.id !== postId));
         try { await deletePost(postId); } catch (e) { setFeed(before); notify('Couldn’t delete', 'Please try again.'); }
+        await refresh().catch(() => {});
+      },
+    });
+  };
+
+  const closeActions = () => { setActionPost(null); setReporting(false); };
+  const onReport = async (reason) => {
+    const target = actionPost;
+    closeActions();
+    try {
+      await reportPost(target.id, reason);
+      notify('Thanks for reporting', 'We review every report within 24 hours and remove posts that break the community guidelines. You can also block this member so you no longer see their posts.');
+    } catch (_) { notify('Couldn’t send report', 'Check your connection and try again.'); }
+  };
+  const onBlock = () => {
+    const target = actionPost;
+    closeActions();
+    confirmDestructive({
+      title: `Block ${target.author}?`,
+      message: 'You won’t see their posts or get notified about them. They won’t be told. You can unblock them in Settings.',
+      confirmText: 'Block',
+      onConfirm: async () => {
+        try {
+          await blockUser(target.authorId, target.author);
+          setFeed((f) => f.filter((p) => p.authorId !== target.authorId));
+        } catch (_) { notify('Couldn’t block', 'Please try again.'); }
         await refresh().catch(() => {});
       },
     });
@@ -195,11 +239,15 @@ export default function GroupScreen({ navigation }) {
                   <Ionicons name={amened ? 'heart' : 'heart-outline'} size={16} color={amened ? colors.white : colors.primary} />
                   <Text style={[styles.amenText, amened && { color: colors.white }]}>Amen{item.amens.length ? ` · ${item.amens.length}` : ''}</Text>
                 </Pressable>
-                {mine && (
+                {mine ? (
                   <Pressable onPress={() => onDelete(item.id)} hitSlop={8} style={({ pressed }) => [styles.delBtn, pressed && { opacity: 0.6 }]} accessibilityLabel="Delete message">
                     <Ionicons name="trash-outline" size={18} color={colors.muted} />
                   </Pressable>
-                )}
+                ) : item.authorId && moderationReady ? (
+                  <Pressable onPress={() => setActionPost(item)} hitSlop={8} style={({ pressed }) => [styles.delBtn, pressed && { opacity: 0.6 }]} accessibilityLabel={`Report or block ${item.author}`}>
+                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.muted} />
+                  </Pressable>
+                ) : null}
               </View>
             </View>
           );
@@ -236,8 +284,47 @@ export default function GroupScreen({ navigation }) {
               <Text style={styles.voiceLabel}>{sending ? 'Sending voice…' : 'or send a voice message (up to 15 min)'}</Text>
               <VoiceRecorder onRecorded={handleVoice} busy={sending} />
             </View>
+            <Text style={styles.guidelines}>
+              Posts must follow the <Text style={styles.guidelinesLink} onPress={openCommunity} accessibilityRole="link">community guidelines</Text>. Abusive content is removed and repeat offenders lose access.
+            </Text>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={!!actionPost} animationType="slide" transparent onRequestClose={closeActions}>
+        <View style={styles.modalWrap}>
+          <Pressable style={styles.backdrop} onPress={closeActions} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            {reporting ? (
+              <>
+                <Text style={styles.sheetTitle}>Why are you reporting this?</Text>
+                <Text style={styles.actionHint}>Reports are private. {actionPost?.author} won’t know who reported them.</Text>
+                {REPORT_REASONS.map((r) => (
+                  <Pressable key={r.key} onPress={() => onReport(r.key)} style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.6 }]}>
+                    <Text style={styles.actionText}>{r.label}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+                  </Pressable>
+                ))}
+              </>
+            ) : (
+              <>
+                <Text style={styles.sheetTitle}>Post by {actionPost?.author}</Text>
+                <Pressable onPress={() => setReporting(true)} style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.6 }]}>
+                  <Ionicons name="flag-outline" size={20} color={colors.text} />
+                  <Text style={[styles.actionText, { flex: 1 }]}>Report post</Text>
+                </Pressable>
+                <Pressable onPress={onBlock} style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.6 }]}>
+                  <Ionicons name="ban-outline" size={20} color={colors.danger} />
+                  <Text style={[styles.actionText, { flex: 1, color: colors.danger }]}>Block {actionPost?.author}</Text>
+                </Pressable>
+              </>
+            )}
+            <Pressable onPress={closeActions} style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal visible={membersVisible} animationType="fade" transparent onRequestClose={() => setMembersVisible(false)}>
@@ -316,5 +403,12 @@ const styles = StyleSheet.create({
   membersCard: { width: '100%', maxWidth: 480, backgroundColor: colors.bg, borderRadius: radius.lg, padding: spacing.xl, ...shadow.floating },
   membersHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md, marginBottom: spacing.lg },
   membersSub: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, marginTop: -8 },
+  guidelines: { fontFamily: fonts.body, fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: spacing.md },
+  guidelinesLink: { color: colors.primary, textDecorationLine: 'underline' },
+  actionHint: { fontFamily: fonts.body, fontSize: 13, color: colors.muted, marginTop: -4, marginBottom: spacing.sm },
+  actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
+  actionText: { fontFamily: fonts.bodySemi, fontSize: 16, color: colors.text },
+  cancelBtn: { alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, marginTop: spacing.md },
+  cancelText: { fontFamily: fonts.bodySemi, fontSize: 15, color: colors.muted },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
 });

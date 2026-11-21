@@ -19,6 +19,8 @@ const MAP = {
   stop: Icons.Square, sunny: Icons.Sun, 'sunny-outline': Icons.Sun,
   'swap-horizontal': Icons.ArrowLeftRight, sync: Icons.RefreshCw,
   'time-outline': Icons.Clock, 'trash-outline': Icons.Trash2,
+  'ellipsis-horizontal': Icons.Ellipsis, 'flag-outline': Icons.Flag, 'ban-outline': Icons.Ban,
+  'shield-checkmark-outline': Icons.ShieldCheck, 'document-text-outline': Icons.FileText,
 };
 
 export function Ionicons({ name, size = 20, color = 'currentColor', style }) {

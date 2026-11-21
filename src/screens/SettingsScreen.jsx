@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, Pressable, ScrollView, StyleSheet, Share } from 'react-native';
 import { Ionicons } from '../components/Icon';
+import AccountCard from '../components/AccountCard';
 import { useApp } from '../data/AppContext';
-import { isNativeApp } from '../data/native';
+import { isNativeApp, openExternalUrl } from '../data/native';
 import { loadReminder, setReminder } from '../data/notifications';
 import { webPushSupported, webPushStatus, subscribeWebPush } from '../data/webPush';
-import { backendMode } from '../data/api';
+import { backendMode, getBlockedUsers, unblockUser } from '../data/api';
 import { supabase } from '../data/supabase';
 import { GROUP_CODE, SUPABASE_URL } from '../data/config';
-import { Card, SectionTitle, confirmDestructive } from '../components/ui';
+import { Card, SectionTitle, confirmDestructive, notify } from '../components/ui';
 import { colors, fonts, spacing, radius } from '../theme';
+
+const SITE = 'https://ardent-study.vercel.app';
+const openPage = (path) => openExternalUrl(SITE + path).catch(() => window.open?.(SITE + path, '_blank'));
 
 function formatTime(hour, minute) {
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
@@ -18,10 +22,12 @@ function formatTime(hour, minute) {
 }
 
 export default function SettingsScreen({ navigation }) {
-  const { profile, selectedGroup, signOut } = useApp();
+  const { profile, selectedGroup, signOut, authUser } = useApp();
+  const isGuest = !!authUser?.is_anonymous;
   const [reminder, setReminderState] = useState({ enabled: false, hour: 7, minute: 0 });
   const [webState, setWebState] = useState(() => (webPushSupported() ? webPushStatus() : 'unsupported'));
   const [webMsg, setWebMsg] = useState('');
+  const [blocked, setBlocked] = useState([]);
   const groupCode = selectedGroup?.code || profile?.groupCode || GROUP_CODE;
 
   const enableWeb = async () => {
@@ -33,6 +39,24 @@ export default function SettingsScreen({ navigation }) {
   };
 
   useEffect(() => { loadReminder().then(setReminderState); }, []);
+  // Refetch on focus so someone blocked from the Groups tab shows up here.
+  useEffect(() => {
+    const load = () => getBlockedUsers().then(setBlocked).catch(() => {});
+    load();
+    return navigation.addListener('focus', load);
+  }, [navigation]);
+
+  const onUnblock = (member) => confirmDestructive({
+    title: `Unblock ${member.name}?`,
+    message: 'Their posts in groups you share will appear again.',
+    confirmText: 'Unblock',
+    onConfirm: async () => {
+      try {
+        await unblockUser(member.userId);
+        setBlocked((list) => list.filter((b) => b.userId !== member.userId));
+      } catch (_) { notify('Couldn’t unblock', 'Please try again.'); }
+    },
+  });
 
   const toggle = async (enabled) => {
     const next = { ...reminder, enabled };
@@ -75,6 +99,17 @@ export default function SettingsScreen({ navigation }) {
     try { await setReminder(next); } catch (_) {}
   };
 
+  // A guest has no way back in, so signing out abandons the journal for good.
+  const onSignOut = () => {
+    if (!isGuest) { signOut(); return; }
+    confirmDestructive({
+      title: 'Sign out of your guest account?',
+      message: 'Your account isn’t saved, so you won’t be able to get back to your journal, prayers, or groups. Save your account with an email first to keep them.',
+      confirmText: 'Sign out anyway',
+      onConfirm: signOut,
+    });
+  };
+
   const shareCode = () =>
     Share.share({
       message: `Join our Bible study group on Ardent. Open the app, tap "Join", and enter this code: ${groupCode}`,
@@ -87,9 +122,11 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.avatar}><Text style={styles.avatarText}>{(profile?.name || '?')[0].toUpperCase()}</Text></View>
         <View style={{ flex: 1 }}>
           <Text style={styles.name}>{profile?.name}</Text>
-          <Text style={styles.meta}>{backendMode === 'supabase' ? 'Connected to your group' : 'On this device only'}</Text>
+          <Text style={styles.meta}>{backendMode !== 'supabase' ? 'On this device only' : isGuest ? 'Guest — account not saved yet' : (authUser?.email || 'Connected to your group')}</Text>
         </View>
       </Card>
+
+      <AccountCard navigation={navigation} />
 
       <SectionTitle style={{ marginTop: spacing.xl }}>Daily reminder</SectionTitle>
       <Card>
@@ -153,6 +190,23 @@ export default function SettingsScreen({ navigation }) {
         </Pressable>
       </Card>
 
+      {blocked.length ? (
+        <>
+          <SectionTitle style={{ marginTop: spacing.xl }}>Blocked members</SectionTitle>
+          <Card>
+            <Text style={styles.sub}>You don’t see posts from these members.</Text>
+            {blocked.map((member) => (
+              <View key={member.userId} style={styles.blockedRow}>
+                <Text style={[styles.label, { flex: 1 }]} numberOfLines={1}>{member.name}</Text>
+                <Pressable onPress={() => onUnblock(member)} hitSlop={8} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+                  <Text style={styles.switchText}>Unblock</Text>
+                </Pressable>
+              </View>
+            ))}
+          </Card>
+        </>
+      ) : null}
+
       <SectionTitle style={{ marginTop: spacing.xl }}>Bible text</SectionTitle>
       <Card>
         <Text style={styles.copy}>Choose a translation on the Today and Bible screens. All four are in the public domain.</Text>
@@ -162,11 +216,25 @@ export default function SettingsScreen({ navigation }) {
         </Text>
       </Card>
 
+      <SectionTitle style={{ marginTop: spacing.xl }}>About</SectionTitle>
+      <Card>
+        <Pressable onPress={() => openPage('/privacy.html')} style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]} accessibilityRole="link">
+          <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
+          <Text style={[styles.label, { flex: 1 }]}>Privacy policy</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+        </Pressable>
+        <Pressable onPress={() => openPage('/community.html')} style={({ pressed }) => [styles.linkRow, styles.linkRowNext, pressed && { opacity: 0.6 }]} accessibilityRole="link">
+          <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+          <Text style={[styles.label, { flex: 1 }]}>Community guidelines</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+        </Pressable>
+      </Card>
+
       <View style={styles.footer}>
         <Ionicons name="book" size={18} color={colors.faint} />
         <Text style={styles.footText}>Ardent · made for Bible study together</Text>
       </View>
-      <Pressable onPress={signOut} style={styles.accountAction}><Text style={styles.switchText}>Sign out</Text></Pressable>
+      <Pressable onPress={onSignOut} style={styles.accountAction}><Text style={styles.switchText}>Sign out</Text></Pressable>
       <Pressable onPress={deleteAccount} style={styles.accountAction}><Text style={[styles.switchText, { color: colors.danger }]}>Delete account and data</Text></Pressable>
     </ScrollView>
   );
@@ -199,5 +267,8 @@ const styles = StyleSheet.create({
   copySmall: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, lineHeight: 18, marginTop: spacing.sm },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: spacing.xxl },
   footText: { fontFamily: fonts.body, fontSize: 13, color: colors.faint },
+  blockedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 4 },
+  linkRowNext: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   accountAction: { alignSelf: 'center', padding: spacing.md },
 });

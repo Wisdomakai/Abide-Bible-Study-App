@@ -10,12 +10,15 @@ For an existing Ardent project, apply these files in order in the SQL editor:
 4. `supabase/webpush.sql`
 5. `supabase/pwa.sql`
 6. `supabase/notifications.sql`
+7. `supabase/moderation.sql` — post reports and member blocking, required by Google Play and the App Store for group content. Apply after `group-collaboration.sql`, because it redefines `feed_with_amens` to hide blocked members. Redeploy `admin-data` and `notify-group` afterwards: the admin dashboard gains a Reports table, and members who blocked an author are no longer notified about that author's posts.
 
 `pwa.sql` is the current consolidation migration: cloud journal sync, separate create/join operations, strong invite codes, the voice post type, private voice storage, PWA reminder preferences, and rate-limited presence logging.
 
 ## 2. Authentication
 
-In Authentication → Providers, enable Email and magic-link sign-in. Disable anonymous sign-ins after existing anonymous users have migrated. Set the production PWA origin as the Site URL and an allowed Redirect URL. Add the local Vite origin only for development.
+People start as **guests**: an anonymous Supabase account with only the name they choose, no email or password. A guest's journal syncs like any other account's. In Settings a guest can save the account by adding an email (Supabase sends a confirmation link) and then a password; the user ID stays the same, so nothing moves. Returning users sign in with email and password or Google.
+
+In Authentication → Providers, keep **Anonymous sign-ins**, **Email** (with "Confirm email" on) and **Google** enabled. Under Authentication → Emails, configure custom SMTP: Supabase's built-in sender only delivers to project team members, so without it nobody else receives confirmation or password-reset emails. Under Attack Protection, enable CAPTCHA (Cloudflare Turnstile or hCaptcha) to stop scripted guest sign-ups; the app then needs the site key passed to `signInAnonymously`. Set the production PWA origin as the Site URL and an allowed Redirect URL. Add the local Vite origin only for development.
 
 ## 3. Edge Functions
 

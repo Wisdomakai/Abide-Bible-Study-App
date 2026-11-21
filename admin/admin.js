@@ -8,6 +8,10 @@ const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
   '"': '&quot;',
 }[character]));
 let activePassword = '';
+const REASONS = {
+  spam: 'Spam', harassment: 'Harassment', hateful: 'Hateful', sexual: 'Sexual content',
+  violence: 'Violence / threats', other: 'Other',
+};
 
 const initials = (name) => (name || '?').trim().slice(0, 2).toUpperCase();
 
@@ -56,7 +60,17 @@ async function load(password) {
       ['Total users', stats.users], ['Active 24h', stats.active24], ['Active 7d', stats.active7],
       ['Notifications', stats.pushOn], ['Groups', stats.groups], ['Posts', stats.posts],
       ['Logins today', stats.loginsToday], ['Countries', stats.countries ?? 0],
+      ['Open reports', stats.openReports ?? 0],
     ].map(([label, number]) => `<div class="stat"><div class="n">${esc(number)}</div><div class="l">${esc(label)}</div></div>`).join('');
+    const reports = data.reports || [];
+    $('reports').innerHTML = reports.length ? reports.map((report) => `<tr>
+      <td>${esc(report.reported_name || '—')}<div class="muted">${esc(ago(report.created_at))}</div></td>
+      <td>${esc(REASONS[report.reason] || report.reason)}${report.details ? `<div class="muted">${esc(report.details)}</div>` : ''}</td>
+      <td class="post">${report.post_type === 'voice' ? '<span class="muted">(voice message)</span> ' : ''}${esc(report.post_snapshot || '')}${report.post_id ? '' : ' <span class="muted">(already deleted)</span>'}</td>
+      <td><span class="chip">${esc(report.groupName)}</span></td>
+      <td><span class="badge ${report.status === 'open' ? 'open' : 'off'}">${esc(report.status)}</span></td>
+      <td class="actions">${report.status === 'open' ? `${report.post_id ? `<button class="danger" data-resolve="${esc(report.id)}" data-remove="1">Remove post</button> ` : ''}<button class="ghost" data-resolve="${esc(report.id)}">Dismiss</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="6" class="muted">No reports. (Reports appear here once moderation.sql is applied.)</td></tr>';
     $('users').innerHTML = data.users.length ? data.users.map((user) => `<tr>
       <td><span class="avatar">${esc(initials(user.name))}</span>${esc(user.name || '(no name)')}</td>
       <td><span class="chip">${esc(user.group)}</span></td><td>${flag(user.country)}</td><td>${esc(fmt(user.joined))}</td><td>${esc(ago(user.lastSeen))}</td>
@@ -83,6 +97,25 @@ function enter() {
   load(password);
 }
 
+async function resolveReport(reportId, remove) {
+  if (remove && !window.confirm('Permanently delete this post for everyone?')) return;
+  try {
+    const response = await fetch(FN_URL, {
+      method: 'POST',
+      headers: { 'x-admin-key': activePassword, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resolve_report', reportId, remove }),
+    });
+    if (!response.ok) throw new Error(`Request failed (${response.status}).`);
+    await load(activePassword);
+  } catch (error) {
+    $('error').innerHTML = `<div class="msg err">${esc(error.message || error)}</div>`;
+  }
+}
+
+$('reports').addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-resolve]');
+  if (button) resolveReport(button.dataset.resolve, button.dataset.remove === '1');
+});
 $('enter').addEventListener('click', enter);
 $('pw').addEventListener('keydown', (event) => { if (event.key === 'Enter') enter(); });
 $('refresh').addEventListener('click', () => load(activePassword));

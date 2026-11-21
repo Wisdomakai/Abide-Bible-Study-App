@@ -4,7 +4,7 @@ This repository implements the technical controls below, but the service operato
 
 ## Implemented
 
-- Passwordless authenticated accounts; anonymous accounts are not created by the PWA.
+- Guest-first accounts: people start with an anonymous account and only a display name, and can later save it with an email and password (or use Google). Guest accounts are real authenticated users, so row-level security, reporting, blocking, and account deletion apply to them the same way.
 - User-owned cloud journal rows protected by row-level security.
 - Group membership policies for shared posts and temporary signed voice playback URLs.
 - Explicit notification opt-in; no automatic browser permission prompt.

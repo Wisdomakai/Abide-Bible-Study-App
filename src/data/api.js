@@ -72,6 +72,11 @@ const localApi = {
   subscribe(_g, listener) { localListeners.add(listener); return () => localListeners.delete(listener); },
   async leaveGroup() {},
   async getRecentPosts() { return []; },
+  // Moderation needs other members, so there is nothing to do offline.
+  async reportPost() {},
+  async blockUser() {},
+  async unblockUser() {},
+  async getBlockedUsers() { return []; },
 };
 
 // ===========================================================================
@@ -81,7 +86,7 @@ let sessionPromise = null;
 
 async function ensureSessionInner() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || user.is_anonymous) throw new Error('Sign in to continue');
+  if (!user) throw new Error('Sign in to continue');
 }
 function ensureSession() {
   if (!sessionPromise) sessionPromise = ensureSessionInner().catch((e) => { sessionPromise = null; throw e; });
@@ -248,7 +253,34 @@ const supaApi = {
       .select('id, group_id, author_id, author_name, type, text, created_at')
       .in('group_id', groupIds).order('created_at', { ascending: false }).limit(40);
     if (error) return [];
-    return (data || []).map((p) => ({ id: p.id, groupId: p.group_id, authorId: p.author_id, author: p.author_name, type: p.type, text: p.text, createdAt: new Date(p.created_at).getTime() }));
+    const blocked = new Set((await supaApi.getBlockedUsers().catch(() => [])).map((b) => b.userId));
+    return (data || []).filter((p) => !blocked.has(p.author_id)).map((p) => ({ id: p.id, groupId: p.group_id, authorId: p.author_id, author: p.author_name, type: p.type, text: p.text, createdAt: new Date(p.created_at).getTime() }));
+  },
+
+  async reportPost(postId, reason, details) {
+    await ensureSession();
+    const { error } = await supabase.rpc('report_post', { p_post_id: postId, p_reason: reason, p_details: details || null });
+    if (error) throw error;
+  },
+
+  async blockUser(userId, name) {
+    await ensureSession();
+    const { error } = await supabase.from('user_blocks').upsert({ blocked_id: userId, blocked_name: name || null }, { onConflict: 'blocker_id,blocked_id' });
+    if (error) throw error;
+  },
+
+  async unblockUser(userId) {
+    await ensureSession();
+    const uid = await currentUserId();
+    const { error } = await supabase.from('user_blocks').delete().eq('blocker_id', uid).eq('blocked_id', userId);
+    if (error) throw error;
+  },
+
+  async getBlockedUsers() {
+    await ensureSession();
+    const { data, error } = await supabase.from('user_blocks').select('blocked_id, blocked_name, created_at').order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map((b) => ({ userId: b.blocked_id, name: b.blocked_name || 'Member', blockedAt: new Date(b.created_at).getTime() }));
   },
 };
 
@@ -269,5 +301,9 @@ export const subscribe = (...a) => api.subscribe(...a);
 export const touchPresence = (...a) => api.touchPresence(...a);
 export const leaveGroup = (...a) => api.leaveGroup(...a);
 export const getRecentPosts = (...a) => api.getRecentPosts(...a);
+export const reportPost = (...a) => api.reportPost(...a);
+export const blockUser = (...a) => api.blockUser(...a);
+export const unblockUser = (...a) => api.unblockUser(...a);
+export const getBlockedUsers = (...a) => api.getBlockedUsers(...a);
 export const getCurrentUserId = isBackendConfigured() ? currentUserId : async () => null;
 export const backendMode = isBackendConfigured() ? 'supabase' : 'local';

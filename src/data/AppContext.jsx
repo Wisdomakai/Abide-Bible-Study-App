@@ -20,8 +20,29 @@ export function AppProvider({ children }) {
   const [streak, setStreak] = useState({ count: 0, lastDate: null });
   const [translation, setTranslationState] = useState('KJV');
   const [userId, setUserId] = useState(null);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const cloudReady = useRef(false);
   const cloudTimer = useRef(null);
+  // The account whose journal_state is loaded. Sync only writes for this user,
+  // so signing in without a page reload (password sign-in, native Google) can
+  // never upload this device's local state over an existing cloud journal.
+  const cloudUserId = useRef(null);
+
+  const applyState = useCallback((state) => {
+    setProfile(state.profile); setReflections(state.reflections || {}); setNotes(state.notes || []);
+    setPrayers(state.prayers || []); setStreak(state.streak || { count: 0, lastDate: null });
+    setHighlights(state.highlights || {});
+    setTranslationState('KJV');
+  }, []);
+
+  // Cloud state wins when it exists; otherwise this device's state seeds it.
+  const loadCloudState = useCallback(async (user, localState) => {
+    const { data, error } = await supabase.from('journal_state').select('data').eq('user_id', user.id).maybeSingle();
+    if (error) throw error;
+    if (data?.data) return { ...localState, ...data.data };
+    await supabase.from('journal_state').upsert({ user_id: user.id, data: localState });
+    return localState;
+  }, []);
 
   useEffect(() => {
     initializeNativeRuntime(supabase).catch(() => {});
@@ -40,24 +61,50 @@ export function AppProvider({ children }) {
       setAuthUser(user);
       setAuthReady(true);
       let state = { profile: p, reflections: r, notes: n, prayers: pr, streak: s, translation: t, highlights: h };
-      if (user && !user.is_anonymous) {
-        const { data } = await supabase.from('journal_state').select('data').eq('user_id', user.id).maybeSingle();
-        if (data?.data) state = { ...state, ...data.data };
-        else await supabase.from('journal_state').upsert({ user_id: user.id, data: state });
+      // Guests are real (anonymous) Supabase users, so their journal syncs too
+      // and carries over unchanged when they save their account.
+      if (user) {
+        state = await loadCloudState(user, state);
+        cloudUserId.current = user.id;
       }
-      setProfile(state.profile); setReflections(state.reflections || {}); setNotes(state.notes || []);
-      setPrayers(state.prayers || []); setStreak(state.streak || { count: 0, lastDate: null });
-      setHighlights(state.highlights || {});
-      setTranslationState('KJV');
+      applyState(state);
       cloudReady.current = true;
       setReady(true);
     })();
-    const authListener = supabase?.auth.onAuthStateChange((_event, session) => setAuthUser(session?.user || null));
-    return () => authListener?.data?.subscription?.unsubscribe();
+    const authListener = supabase?.auth.onAuthStateChange((event, session) => {
+      const user = session?.user || null;
+      setAuthUser(user);
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
+      // A different account signed in after boot: load its journal first.
+      // Deferred because supabase-js must not be awaited inside this callback.
+      if (user && cloudReady.current && cloudUserId.current !== user.id) {
+        setTimeout(async () => {
+          setReady(false);
+          try {
+            const local = {
+              profile: await loadJSON(KEYS.profile, null), reflections: await loadJSON(KEYS.reflections, {}),
+              notes: await loadJSON(KEYS.notes, []), prayers: await loadJSON(KEYS.prayers, []),
+              streak: await loadJSON(KEYS.streak, { count: 0, lastDate: null }),
+              translation: 'KJV', highlights: await loadJSON(KEYS.highlights, {}),
+            };
+            applyState(await loadCloudState(user, local));
+            cloudUserId.current = user.id;
+          } catch (_) {
+            // Leave sync paused for this user rather than risk overwriting.
+          } finally { setReady(true); }
+        }, 0);
+      }
+    });
+    const onNativeRecovery = () => setPasswordRecovery(true);
+    window.addEventListener('ardent:password-recovery', onNativeRecovery);
+    return () => {
+      authListener?.data?.subscription?.unsubscribe();
+      window.removeEventListener('ardent:password-recovery', onNativeRecovery);
+    };
   }, []);
 
   useEffect(() => {
-    if (!cloudReady.current || !authUser || authUser.is_anonymous) return undefined;
+    if (!cloudReady.current || !authUser || cloudUserId.current !== authUser.id) return undefined;
     clearTimeout(cloudTimer.current);
     cloudTimer.current = setTimeout(() => {
       supabase.from('journal_state').upsert({
@@ -68,6 +115,34 @@ export function AppProvider({ children }) {
     }, 500);
     return () => clearTimeout(cloudTimer.current);
   }, [authUser?.id, profile, reflections, notes, prayers, streak, translation, highlights]);
+
+  // Guest start: an anonymous account, no email or password. Onboarding then
+  // asks for the name everyone in a group sees.
+  const startAsGuest = useCallback(async () => {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) throw error;
+  }, []);
+
+  // Saving a guest account keeps the same user ID, so the journal, groups and
+  // posts stay put. Step 1 attaches an email (Supabase sends a confirmation
+  // link); step 2, once confirmed, sets the password.
+  const saveAccountEmail = useCallback(async (email) => {
+    const { error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: 'https://ardent-study.vercel.app/' });
+    if (error) throw error;
+  }, []);
+
+  const setAccountPassword = useCallback(async (password) => {
+    const { data, error } = await supabase.auth.updateUser({ password, data: { has_password: true } });
+    if (error) throw error;
+    if (data?.user) setAuthUser(data.user);
+  }, []);
+
+  // Picks up an email confirmed in another tab or the browser, which turns
+  // the guest into a permanent account.
+  const refreshAuthUser = useCallback(async () => {
+    const { data } = await supabase.auth.refreshSession();
+    if (data?.user) setAuthUser(data.user);
+  }, []);
 
   const signInWithGoogle = useCallback(async () => {
     if (authUser?.is_anonymous) await supabase.auth.signOut();
@@ -81,6 +156,39 @@ export function AppProvider({ children }) {
     });
     if (error) throw error;
   }, [authUser?.is_anonymous]);
+
+  // Email + password accounts. The confirmation and reset links return to the
+  // live site, which the Android app also loads.
+  const signUpWithEmail = useCallback(async (email, password) => {
+    if (authUser?.is_anonymous) await supabase.auth.signOut();
+    const { data, error } = await supabase.auth.signUp({
+      email, password, options: { emailRedirectTo: 'https://ardent-study.vercel.app/', data: { has_password: true } },
+    });
+    if (error) throw error;
+    // An existing confirmed address returns a user with no identities and no
+    // email is sent; say so instead of claiming a confirmation is on its way.
+    if (data.user && !data.user.identities?.length) {
+      throw new Error('An account with this email already exists. Sign in instead, or reset your password.');
+    }
+    return { needsConfirmation: !data.session };
+  }, [authUser?.is_anonymous]);
+
+  const signInWithEmail = useCallback(async (email, password) => {
+    if (authUser?.is_anonymous) await supabase.auth.signOut();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  }, [authUser?.is_anonymous]);
+
+  const sendPasswordReset = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: 'https://ardent-study.vercel.app/' });
+    if (error) throw error;
+  }, []);
+
+  const updatePassword = useCallback(async (password) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+    setPasswordRecovery(false);
+  }, []);
 
   const signOut = useCallback(async () => { await supabase.auth.signOut(); window.location.reload(); }, []);
 
@@ -118,7 +226,7 @@ export function AppProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!profile?.name || !authUser || authUser.is_anonymous) return;
+    if (!profile?.name || !authUser) return;
     touchPresence().then(refreshGroups).catch(() => refreshGroups());
   }, [profile?.name, authUser?.id, refreshGroups]);
 
@@ -309,7 +417,9 @@ export function AppProvider({ children }) {
   }, [prayers]);
 
   const value = {
-    ready, authReady, authUser, signInWithGoogle, signOut, profile, saveProfile, userId,
+    ready, authReady, authUser, signInWithGoogle, signOut,
+    signUpWithEmail, signInWithEmail, sendPasswordReset, updatePassword, passwordRecovery,
+    startAsGuest, saveAccountEmail, setAccountPassword, refreshAuthUser, profile, saveProfile, userId,
     reflections, saveReflection,
     notes, upsertNote, deleteNote,
     highlights, highlightVerses, removeHighlights,

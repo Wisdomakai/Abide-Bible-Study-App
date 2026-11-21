@@ -12,12 +12,15 @@ async function completeNativeAuth(urlValue, supabase) {
   if (!isNativeApp || !urlValue) return false;
   let url;
   try { url = new URL(urlValue); } catch (_) { return false; }
-  if (url.hostname !== AUTH_RETURN || url.searchParams.get('native_auth') !== '1') return false;
+  if (url.hostname !== AUTH_RETURN) return false;
 
   const fragment = new URLSearchParams(url.hash.replace(/^#/, ''));
   const accessToken = fragment.get('access_token');
   const refreshToken = fragment.get('refresh_token');
   const code = url.searchParams.get('code');
+  // Google returns with native_auth=1. Email confirmation and password-reset
+  // links carry tokens without it when Android opens them in the app.
+  if (url.searchParams.get('native_auth') !== '1' && !accessToken && !code) return false;
   try {
     if (accessToken && refreshToken) {
       const { error } = await supabase.auth.setSession({
@@ -25,6 +28,7 @@ async function completeNativeAuth(urlValue, supabase) {
         refresh_token: refreshToken,
       });
       if (error) throw error;
+      if (fragment.get('type') === 'recovery') window.dispatchEvent(new Event('ardent:password-recovery'));
     } else if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) throw error;
@@ -35,7 +39,7 @@ async function completeNativeAuth(urlValue, supabase) {
     return true;
   } catch (error) {
     await Browser.close().catch(() => {});
-    window.alert(error?.message || 'Could not finish Google sign-in.');
+    window.alert(error?.message || 'Could not finish signing in.');
     return false;
   }
 }
