@@ -10,7 +10,8 @@ For an existing Ardent project, apply these files in order in the SQL editor:
 4. `supabase/webpush.sql`
 5. `supabase/pwa.sql`
 6. `supabase/notifications.sql`
-7. `supabase/moderation.sql` — post reports and member blocking, required by Google Play and the App Store for group content. Apply after `group-collaboration.sql`, because it redefines `feed_with_amens` to hide blocked members. Redeploy `admin-data` and `notify-group` afterwards: the admin dashboard gains a Reports table, and members who blocked an author are no longer notified about that author's posts.
+7. `supabase/reminders-cron.sql` — schedules the daily-reminder push (after `notify-reminders` is deployed).
+8. `supabase/moderation.sql` — post reports and member blocking, required by Google Play and the App Store for group content. Apply after `group-collaboration.sql`, because it redefines `feed_with_amens` to hide blocked members. Redeploy `admin-data` and `notify-group` afterwards: the admin dashboard gains a Reports table, and members who blocked an author are no longer notified about that author's posts.
 
 `pwa.sql` is the current consolidation migration: cloud journal sync, separate create/join operations, strong invite codes, the voice post type, private voice storage, PWA reminder preferences, and rate-limited presence logging.
 
@@ -50,7 +51,7 @@ select vault.create_secret('replace-with-the-same-random-value', 'notify_secret'
 
 ## 4. Scheduled reminders
 
-Schedule an authenticated POST to `/functions/v1/notify-reminders` every minute using Supabase Cron. Send the `CRON_SECRET` value in the `x-cron-secret` header. The function compares each subscription’s timezone and preferred local hour/minute and records the date after a successful push, preventing duplicates.
+Daily reminders for the installed PWA run from `supabase/reminders-cron.sql`, which enables `pg_cron` and schedules a POST to `/functions/v1/notify-reminders` every minute. The job sends the Vault `notify_secret` (the same secret the post trigger uses) in the `x-cron-secret` header, and the function accepts it through its `NOTIFY_SECRET`; set a separate `CRON_SECRET` only if you want the two callers to use different secrets, and update the job to match. The function compares each subscription’s timezone and preferred local hour/minute and records the date after a successful push, preventing duplicates.
 
 ## 5. Group notifications
 

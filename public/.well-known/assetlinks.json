@@ -1,8 +1,15 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "com.ardentbiblestudy.app",
-        "sha256_cert_fingerprints": ["2D:1F:7A:85:31:1C:6A:98:E7:C1:26:42:F1:D2:60:51:72:F9:7D:2D:FD:14:19:FD:B2:80:78:D5:9A:DD:48:19"]
-      }
-    }]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ardentbiblestudy.app",
+      "sha256_cert_fingerprints": [
+        "2D:1F:7A:85:31:1C:6A:98:E7:C1:26:42:F1:D2:60:51:72:F9:7D:2D:FD:14:19:FD:B2:80:78:D5:9A:DD:48:19",
+        "AE:FD:9D:A6:57:EF:12:80:D9:D0:55:67:B7:43:4F:6F:5D:4A:0F:49:29:96:B8:15:A5:24:7F:6A:9F:F9:A1:06"
+      ]
+    }
+  }
+]

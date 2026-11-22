@@ -6,8 +6,11 @@ const privateKey = Deno.env.get('VAPID_PRIVATE');
 const subject = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:notifications@ardent.app';
 if (publicKey && privateKey) webpush.setVapidDetails(subject, publicKey, privateKey);
 
+// Called every minute by the pg_cron job in reminders-cron.sql. That job sends
+// the Vault `notify_secret` — the same internal secret the post trigger sends
+// to notify-group — so NOTIFY_SECRET is accepted when no CRON_SECRET is set.
 Deno.serve(async (request) => {
-  const expected = Deno.env.get('CRON_SECRET');
+  const expected = Deno.env.get('CRON_SECRET') ?? Deno.env.get('NOTIFY_SECRET');
   if (!expected || request.headers.get('x-cron-secret') !== expected) return new Response('Unauthorized', { status: 401 });
   if (!publicKey || !privateKey) return new Response('VAPID is not configured', { status: 500 });
 
