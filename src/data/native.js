@@ -4,6 +4,9 @@ import { Browser } from '@capacitor/browser';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 export const isNativeApp = Capacitor.isNativePlatform();
+// Apple requires Sign in with Apple in any app that offers Google sign-in, so
+// the iPhone app offers guest and email accounts only.
+export const offersGoogleSignIn = Capacitor.getPlatform() !== 'ios';
 const AUTH_RETURN = 'ardent-study.vercel.app';
 const REMINDER_ID = 730;
 let initialized = false;

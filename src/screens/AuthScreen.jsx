@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, Image, ScrollView, Keyboa
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/ui';
 import { useApp } from '../data/AppContext';
+import { offersGoogleSignIn } from '../data/native';
 import { colors, fonts, spacing, field } from '../theme';
 
 const MIN_PASSWORD = 8;
@@ -125,7 +126,7 @@ export default function AuthScreen() {
       <Button title={busy ? 'Please wait…' : action[mode]} disabled={busy} onPress={submit} style={styles.primary} />
       <Feedback message={message} error={error} />
 
-      {mode !== 'reset' ? (
+      {mode !== 'reset' && offersGoogleSignIn ? (
         <>
           <View style={styles.divider}><View style={styles.rule} /><Text style={styles.or}>or</Text><View style={styles.rule} /></View>
           <Button title="Continue with Google" variant="outline" icon="enter-outline" disabled={busy} onPress={google} />

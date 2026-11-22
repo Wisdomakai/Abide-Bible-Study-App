@@ -43,6 +43,8 @@ run('npm', ['run', 'build']);
 await fs.rm(path.join(root, 'dist', 'downloads'), { recursive: true, force: true });
 // iOS launch images are dead weight in an Android package (~1.3 MB).
 await fs.rm(path.join(root, 'dist', 'splash'), { recursive: true, force: true });
+// The admin dashboard is a website-only tool; it has no place in the app.
+await fs.rm(path.join(root, 'dist', 'admin'), { recursive: true, force: true });
 run(path.join(root, 'node_modules', '.bin', 'cap'), ['sync', 'android']);
 // The APK is for direct installs from the website; Google Play only accepts
 // the App Bundle (.aab).

@@ -1,10 +1,14 @@
 # Build and release
 
-Ardent's primary product is the PWA. The Android app is a Capacitor shell that
-loads the live site (`server.url` in `capacitor.config.json`), so web fixes reach
-Android users on the next deploy without a store update. A new Android release
-is only needed for native changes: permissions, plugins, icons, or the SDK
-target. Expo and EAS are not used.
+Ardent's primary product is the PWA. The Android app is a Capacitor package
+with the production web build stored inside it (`webDir: dist`); it runs from
+`https://localhost` and talks to the same Supabase backend. Web changes reach
+Android users only through a new store release, so bump the version and
+rebuild after any change to `src/`. Expo and EAS are not used.
+
+Links to `https://ardent-study.vercel.app` (Google sign-in returns, email
+confirmation and password-reset links) still open the app through Android App
+Links, and `src/data/native.js` completes sign-in from them.
 
 ```bash
 npm ci

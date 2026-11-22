@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 Deno.serve(async (request) => {
   const origin = request.headers.get('origin') || '';
   const allowed = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map((value) => value.trim()).filter(Boolean);
-  const nativeOrigins = ['https://localhost', 'http://localhost'];
+  // Bundled app origins: Android serves from https://localhost, iOS from capacitor://localhost.
+  const nativeOrigins = ['https://localhost', 'http://localhost', 'capacitor://localhost'];
   const originAllowed = allowed.includes(origin) || nativeOrigins.includes(origin);
   const cors = {
     'Access-Control-Allow-Origin': originAllowed ? origin : allowed[0] || '',
