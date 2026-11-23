@@ -2,18 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from './Icon';
 import { generateCode, normalizeCode } from '../data/groupCode';
+import { openExternalUrl } from '../data/native';
+
+const COMMUNITY_URL = 'https://ardent-study.vercel.app/community.html';
 import { colors, fonts, spacing, radius } from '../theme';
 
 // Create a new group (name + auto code) or join one by code.
-// Calls onChange({ mode, code, groupName }) whenever the selection changes.
+// Calls onChange({ mode, code, groupName, agreed }) whenever the selection changes.
+// `agreed` is the member's acceptance of the community guidelines, which App
+// Store guideline 1.2 requires before anyone can take part in a group.
 export default function GroupPicker({ onChange }) {
   const [mode, setMode] = useState('create');
   const [createdCode] = useState(() => generateCode());
   const [groupName, setGroupName] = useState('');
   const [joinCode, setJoinCode] = useState('');
+  const [agreed, setAgreed] = useState(false);
 
   const code = mode === 'create' ? createdCode : normalizeCode(joinCode);
-  useEffect(() => { onChange({ mode, code, groupName: mode === 'create' ? groupName.trim() : '' }); }, [code, groupName, mode, onChange]);
+  useEffect(() => { onChange({ mode, code, groupName: mode === 'create' ? groupName.trim() : '', agreed }); }, [code, groupName, mode, agreed, onChange]);
+
+  const openGuidelines = () => { openExternalUrl(COMMUNITY_URL).catch(() => {}); };
 
   return (
     <View>
@@ -44,6 +52,15 @@ export default function GroupPicker({ onChange }) {
           <TextInput value={joinCode} onChangeText={setJoinCode} placeholder="e.g. GRACE27" placeholderTextColor={colors.faint} autoCapitalize="characters" autoCorrect={false} style={styles.input} />
         </View>
       )}
+
+      <Pressable onPress={() => setAgreed((v) => !v)} style={styles.agreeRow} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }}>
+        <View style={[styles.box, agreed && styles.boxOn]}>
+          {agreed ? <Ionicons name="checkmark" size={15} color={colors.white} /> : null}
+        </View>
+        <Text style={styles.agreeText}>
+          I agree to the <Text style={styles.agreeLink} onPress={(e) => { e?.stopPropagation?.(); openGuidelines(); }} accessibilityRole="link">Community Guidelines</Text>. There is no tolerance for objectionable or abusive content; it is removed and its author can lose access.
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -58,5 +75,10 @@ const styles = StyleSheet.create({
   codeBox: { backgroundColor: colors.primarySoft, borderRadius: radius.md, padding: spacing.lg, alignItems: 'center', marginTop: spacing.lg },
   code: { fontFamily: fonts.serifBold, fontSize: 30, color: colors.primary, letterSpacing: 1 },
   codeHint: { fontFamily: fonts.body, fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 8, lineHeight: 19 },
+  agreeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, marginTop: spacing.lg },
+  box: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  boxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  agreeText: { flex: 1, fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.muted },
+  agreeLink: { color: colors.primary, textDecorationLine: 'underline' },
   input: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.lg, height: 54, fontFamily: fonts.bodyMedium, fontSize: 17, color: colors.text, marginBottom: spacing.sm },
 });

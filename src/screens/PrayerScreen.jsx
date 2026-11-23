@@ -40,7 +40,7 @@ export default function PrayerScreen() {
       const post = await addPost(group.id, { author: profile.name, type: 'prayer', text: p.text });
       setPrayerShared(p.id, post.id);
       notify('Shared', `Your prayer request was posted to ${group.name}.`);
-    } catch (_) { notify('Couldn’t share', 'Check your connection and try again.'); }
+    } catch (e) { notify('Couldn’t share', e?.userFacing ? e.message : 'Check your connection and try again.'); }
     finally { setSharingId(null); }
   };
 

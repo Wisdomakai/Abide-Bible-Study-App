@@ -135,6 +135,7 @@ export function AppProvider({ children }) {
     const { data, error } = await supabase.auth.updateUser({ password, data: { has_password: true } });
     if (error) throw error;
     if (data?.user) setAuthUser(data.user);
+    return data?.user ?? null;
   }, []);
 
   // Picks up an email confirmed in another tab or the browser, which turns

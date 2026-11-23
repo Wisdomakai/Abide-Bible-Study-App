@@ -2,7 +2,7 @@ import React from 'react';
 import * as Icons from 'lucide-react';
 
 const MAP = {
-  add: Icons.Plus, 'add-circle-outline': Icons.CirclePlus, 'alert-circle': Icons.CircleAlert,
+  add: Icons.Plus, 'arrow-forward': Icons.ArrowRight, 'color-palette-outline': Icons.Palette, 'add-circle-outline': Icons.CirclePlus, 'alert-circle': Icons.CircleAlert,
   book: Icons.BookOpen, 'book-outline': Icons.BookOpen, bookmark: Icons.Bookmark,
   'bookmark-outline': Icons.Bookmark, 'chatbubbles-outline': Icons.MessageCircle,
   checkmark: Icons.Check, 'checkmark-circle': Icons.CircleCheck, 'checkmark-done-outline': Icons.BadgeCheck,

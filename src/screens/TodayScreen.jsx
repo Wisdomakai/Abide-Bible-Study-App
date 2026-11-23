@@ -62,7 +62,7 @@ export default function TodayScreen({ navigation }) {
       await addPost(group.id, { author: profile.name, type: 'reflection', ref: verse.ref, text: text.trim() });
       showToast(`Shared to ${group.name} ✓`);
     } catch (e) {
-      showToast('Couldn’t share — check your connection', false);
+      showToast(e?.userFacing ? e.message : 'Couldn’t share — check your connection', false);
     } finally {
       setSharing(false);
     }

@@ -8,7 +8,7 @@ import { colors, fonts, spacing } from '../theme';
 
 export default function JoinGroupScreen({ navigation }) {
   const { profile, refreshGroups, selectGroup } = useApp();
-  const [picker, setPicker] = useState({ mode: 'create', code: '', groupName: '' });
+  const [picker, setPicker] = useState({ mode: 'create', code: '', groupName: '', agreed: false });
   const [busy, setBusy] = useState(false);
 
   const apply = async () => {
@@ -23,7 +23,7 @@ export default function JoinGroupScreen({ navigation }) {
       if (id) selectGroup(id);
       navigation.goBack();
     } catch (e) {
-      notify('Couldn’t join', 'Please check the code and your connection, then try again.');
+      notify(e?.userFacing ? 'Choose another name' : 'Couldn’t join', e?.userFacing ? e.message : 'Please check the code and your connection, then try again.');
     } finally {
       setBusy(false);
     }
@@ -33,7 +33,7 @@ export default function JoinGroupScreen({ navigation }) {
     <View style={styles.screen}>
       <Text style={styles.intro}>Start a new group or join one with a code your mates shared. You can belong to several groups and switch between them.</Text>
       <GroupPicker onChange={setPicker} />
-      <Button title={busy ? 'Saving…' : 'Save group'} icon="checkmark" disabled={!picker.code || busy} onPress={apply} style={{ marginTop: spacing.xl }} />
+      <Button title={busy ? 'Saving…' : 'Save group'} icon="checkmark" disabled={!picker.code || !picker.agreed || busy} onPress={apply} style={{ marginTop: spacing.xl }} />
     </View>
   );
 }

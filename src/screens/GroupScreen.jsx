@@ -88,7 +88,7 @@ export default function GroupScreen({ navigation }) {
         .map((member) => member.userId);
       await addPost(selectedGroupId, { author: profile.name, type: 'note', text: draft.trim(), mentionedUserIds });
       setDraft(''); setComposing(false); await refresh();
-    } catch (_) { notify('Couldn’t post', 'Check your connection and try again.'); }
+    } catch (e) { notify('Couldn’t post', e?.userFacing ? e.message : 'Check your connection and try again.'); }
     finally { setSending(false); }
   };
   const handleVoice = async (uri, dur) => {

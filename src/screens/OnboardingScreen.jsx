@@ -5,6 +5,7 @@ import { Ionicons } from '../components/Icon';
 import { useApp } from '../data/AppContext';
 import { Button, notify } from '../components/ui';
 import GroupPicker from '../components/GroupPicker';
+import { containsObjectionable, OBJECTIONABLE_MESSAGE } from '../data/moderation';
 import { createGroup, joinGroupByCode } from '../data/api';
 import { colors, fonts, spacing, radius } from '../theme';
 
@@ -12,8 +13,15 @@ export default function OnboardingScreen() {
   const { saveProfile } = useApp();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [picker, setPicker] = useState({ mode: 'create', code: '', groupName: '' });
+  const [picker, setPicker] = useState({ mode: 'create', code: '', groupName: '', agreed: false });
   const [busy, setBusy] = useState(false);
+
+  // Other members see this name, so it goes through the same filter as posts.
+  const next = () => {
+    if (!name.trim()) return;
+    if (containsObjectionable(name)) { notify('Choose another name', OBJECTIONABLE_MESSAGE); return; }
+    setStep(2);
+  };
 
   const finish = async () => {
     if (!name.trim() || !picker.code) return;
@@ -28,7 +36,8 @@ export default function OnboardingScreen() {
       // Include the underlying reason: a generic message here left "Begin"
       // looking like it did nothing at all.
       const hint = picker.mode === 'join' ? 'That invite code was not found.' : 'Please try again with a new invite code.';
-      notify('Couldn’t save group', `${hint}\n\n${error?.message || error}`);
+      if (error?.userFacing) notify('Please change it', error.message);
+      else notify('Couldn’t save group', `${hint}\n\n${error?.message || error}`);
     } finally { setBusy(false); }
   };
 
@@ -54,7 +63,7 @@ export default function OnboardingScreen() {
                   style={styles.input}
                   autoFocus
                   returnKeyType="next"
-                  onSubmitEditing={() => name.trim() && setStep(2)}
+                  onSubmitEditing={next}
                   maxLength={24}
                 />
               </View>
@@ -69,10 +78,10 @@ export default function OnboardingScreen() {
 
         <View style={styles.footer}>
           {step === 1 ? (
-            <Button title="Continue" icon="arrow-forward" disabled={!name.trim()} onPress={() => setStep(2)} />
+            <Button title="Continue" icon="arrow-forward" disabled={!name.trim()} onPress={next} />
           ) : (
             <>
-              <Button title={busy ? 'Saving…' : 'Begin'} icon="checkmark" disabled={!picker.code || busy} onPress={finish} />
+              <Button title={busy ? 'Saving…' : 'Begin'} icon="checkmark" disabled={!picker.code || !picker.agreed || busy} onPress={finish} />
               <Button title="Back" variant="ghost" onPress={() => setStep(1)} style={{ marginTop: spacing.sm }} />
             </>
           )}

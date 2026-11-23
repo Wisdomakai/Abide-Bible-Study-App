@@ -34,7 +34,9 @@ export default function SettingsScreen({ navigation }) {
     setWebMsg('Requesting permission…');
     const r = await subscribeWebPush();
     if (r.ok) { setWebState('granted'); setWebMsg('Notifications enabled on this device ✓'); }
-    else if (r.reason === 'denied') setWebMsg('Permission was blocked. Allow notifications in your browser settings, then try again.');
+    else if (r.reason === 'denied') setWebMsg(isNativeApp
+      ? 'Notifications are turned off for Ardent. Turn them on in your phone’s Settings, then try again.'
+      : 'Permission was blocked. Allow notifications in your browser settings, then try again.');
     else setWebMsg('Couldn’t enable: ' + r.reason);
   };
 
@@ -161,7 +163,7 @@ export default function SettingsScreen({ navigation }) {
             <Text style={styles.label}>Get notified of new group posts</Text>
             <Text style={styles.sub}>
               {isNativeApp
-                ? 'Shows new group posts on the bell while Ardent is open. Alerts when the app is closed are not available in the Android app yet.'
+                ? 'Shows new group posts on the bell while Ardent is open.'
                 : 'Shows phone alerts from the installed PWA, even while Ardent is closed.'}
             </Text>
             <Pressable onPress={enableWeb} style={({ pressed }) => [styles.shareBtn, { marginTop: spacing.lg, alignSelf: 'flex-start' }, pressed && { opacity: 0.85 }]}>
@@ -226,6 +228,11 @@ export default function SettingsScreen({ navigation }) {
         <Pressable onPress={() => openPage('/community.html')} style={({ pressed }) => [styles.linkRow, styles.linkRowNext, pressed && { opacity: 0.6 }]} accessibilityRole="link">
           <Ionicons name="document-text-outline" size={18} color={colors.primary} />
           <Text style={[styles.label, { flex: 1 }]}>Community guidelines</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+        </Pressable>
+        <Pressable onPress={() => openPage('/support.html')} style={({ pressed }) => [styles.linkRow, styles.linkRowNext, pressed && { opacity: 0.6 }]} accessibilityRole="link">
+          <Ionicons name="chatbubbles-outline" size={18} color={colors.primary} />
+          <Text style={[styles.label, { flex: 1 }]}>Help & support</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.faint} />
         </Pressable>
       </Card>

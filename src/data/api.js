@@ -21,6 +21,7 @@ import { isBackendConfigured, GROUP_CODE, GROUP_NAME } from './config';
 import { supabase } from './supabase';
 import { signedVoiceUrl } from './voice';
 import { generateCode } from './groupCode';
+import { containsObjectionable, objectionableError } from './moderation';
 
 // ===========================================================================
 // LOCAL backend (no server) — single on-device group, ignores groupId.
@@ -290,11 +291,17 @@ const supaApi = {
 const api = isBackendConfigured() ? supaApi : localApi;
 
 export const joinGroupByCode = (...a) => api.joinGroupByCode(...a);
-export const createGroup = (...a) => api.createGroup(...a);
+export const createGroup = (code, name, groupName, ...rest) => {
+  if (containsObjectionable(groupName)) return Promise.reject(objectionableError());
+  return api.createGroup(code, name, groupName, ...rest);
+};
 export const getMyGroups = (...a) => api.getMyGroups(...a);
 export const getFeed = (...a) => api.getFeed(...a);
 export const getGroupMembers = (...a) => api.getGroupMembers(...a);
-export const addPost = (...a) => api.addPost(...a);
+export const addPost = (groupId, post, ...rest) => {
+  if (containsObjectionable(post?.text)) return Promise.reject(objectionableError());
+  return api.addPost(groupId, post, ...rest);
+};
 export const toggleAmen = (...a) => api.toggleAmen(...a);
 export const deletePost = (...a) => api.deletePost(...a);
 export const subscribe = (...a) => api.subscribe(...a);

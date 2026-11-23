@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Card, SectionTitle, Button } from './ui';
 import { useApp } from '../data/AppContext';
+import { isNativeApp } from '../data/native';
 import { colors, fonts, spacing, field } from '../theme';
 
 const MIN_PASSWORD = 8;
@@ -46,8 +47,10 @@ export default function AccountCard({ navigation }) {
   });
 
   const checkConfirmed = () => run(async () => {
-    await refreshAuthUser();
-    setMessage('Not confirmed yet. Open the link in the email we sent, then try again.');
+    const user = await refreshAuthUser();
+    // Once confirmed, the account is no longer anonymous and the card moves on
+    // to the password step on its own; only nag while it is still pending.
+    if (user?.is_anonymous) setMessage('Not confirmed yet. Open the link in the email we sent, then try again.');
   });
 
   const savePassword = () => run(async () => {
@@ -77,7 +80,7 @@ export default function AccountCard({ navigation }) {
           </>
         ) : (
           <>
-            <Text style={styles.copy}>You’re using Ardent as a guest. If you lose this phone, clear the browser, or reinstall, your journal can’t be recovered. Add an email to keep it safe and sign in on other devices.</Text>
+            <Text style={styles.copy}>You’re using Ardent as a guest. {isNativeApp ? 'If you lose or reset this phone, or delete the app,' : 'If you lose this phone, clear the browser, or reinstall,'} your journal can’t be recovered. Add an email to keep it safe and sign in on other devices.</Text>
             <TextInput value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor={colors.faint} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" style={styles.input} accessibilityLabel="Email" onSubmitEditing={sendEmail} />
             <Button title={busy ? 'Sending…' : 'Save my account'} disabled={busy} onPress={sendEmail} style={styles.btn} />
           </>

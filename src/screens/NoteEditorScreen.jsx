@@ -88,7 +88,7 @@ export default function NoteEditorScreen({ route, navigation }) {
       const current = notes.find((note) => note.id === savedId);
       upsertNote({ id: savedId, sharedPostIds: [...new Set([...(current?.sharedPostIds || []), current?.sharedPostId, post.id].filter(Boolean))], sharedPostId: undefined });
       notify('Shared', `Your note was posted to ${group.name}.`);
-    } catch (_) { notify('Couldn’t share', 'Check your connection and try again.'); }
+    } catch (e) { notify('Couldn’t share', e?.userFacing ? e.message : 'Check your connection and try again.'); }
     finally { setSharing(false); }
   };
 
